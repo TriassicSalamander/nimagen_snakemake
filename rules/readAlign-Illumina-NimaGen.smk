@@ -54,7 +54,14 @@ rule trim_reads:
         "logs/trim_galore/{sample}.log"
     shell:
         r"""
-        trim_galore --nextseq 30 --dont_gzip --length 50 -o {params.out_path} --basename {wildcards.sample} --paired {input.fq1} {input.fq2} > /dev/null  2>{log}
+        trim_galore \
+        --nextseq 30 \
+        --dont_gzip \
+        --length 50 \
+        -o {params.out_path} \
+        --basename {wildcards.sample} \
+        --paired {input.fq1} {input.fq2} \
+        > /dev/null  2>{log}
         """
 
 
@@ -63,21 +70,20 @@ rule prinseq_trim:
         trimmed1 = rules.trim_reads.output.trimmed1,
         trimmed2 = rules.trim_reads.output.trimmed2
     output:
-        prin_trim1 = config["output_path"] + "/{sample}/{sample}",
-        prin_trim2 = config["output_path"] + ""
-    params:
-
+        prin_trim1 = config["output_path"] + "/{sample}/{sample}_prinseq_1.fastq",
+        prin_trim2 = config["output_path"] + "/{sample}/{sample}_prinseq_2.fastq"
     log:
         "logs/prinseq/{sample}.log"
+    params:
+        out_path = config["output_path"] + "/{sample}/"
     shell:
         r"""
-        prinseq-lite.pl -trim_qual_right 30 -fastq $trimmed1 -fastq2 $trimmed2 -out_good ${sample}_prinseq -out_bad ${sample}_bad -min_len 50
+        prinseq-lite.pl \
+        -trim_qual_right 30 \
+        -fastq {input.trimmed1} \
+        -fastq2 {input.trimmed2} \
+        -out_good {params.out_path}{wildcards.sample}_prinseq \
+        -out_bad {params.out_path}{wildcards.sample}_bad \
+        -min_len 50 \
+        -log {log}
         """
-
-
-CVR13423_bad_1.fastq
-CVR13423_bad_2.fastq
-CVR13423_prinseq_1.fastq
-CVR13423_prinseq_1_singletons.fastq
-CVR13423_prinseq_2.fastq
-CVR13423_prinseq_2_singletons.fastq
