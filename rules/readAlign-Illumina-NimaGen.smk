@@ -72,10 +72,10 @@ rule prinseq_trim:
     output:
         prin_trim1 = config["output_path"] + "/{sample}/{sample}_prinseq_1.fastq",
         prin_trim2 = config["output_path"] + "/{sample}/{sample}_prinseq_2.fastq"
-    log:
-        "logs/prinseq/{sample}.log"
     params:
         out_path = config["output_path"] + "/{sample}/"
+    log:
+        "logs/prinseq/{sample}.log"
     shell:
         r"""
         prinseq-lite.pl \
@@ -86,4 +86,33 @@ rule prinseq_trim:
         -out_bad {params.out_path}{wildcards.sample}_bad \
         -min_len 50 \
         -log {log}
+        """
+
+
+rule align_reads:
+    input:
+        prin_trim1 = rules.prinseq_trim.output.prin_trim1,
+        prin_trim2 = rules.prinseq_trim.output.prin_trim2
+    output:
+        bam = config["output_path"] + "/{sample}/{sample}.bam"
+    params:
+        ref = config["ref_genome"],
+        threads = config["threads"],
+        out_path = config["output_path"] + "/{sample}/"
+    log:
+        "logs/bwamem/{sample}.log"
+    shell:
+        r"""
+        bwa mem \
+        -t {params.threads} \
+        {params.ref} \
+        {input.prin_trim1} \
+        {input.prin_trim2} \
+        2>{log} \
+	| samtools view -F4 -bS - \
+        2>{log}
+        | samtools sort \
+        -@{params.threads} \
+        -o {output.bam} -
+        2>{log}
         """
