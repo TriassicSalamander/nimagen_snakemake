@@ -7,9 +7,8 @@ output_path: test_output
 ##### Other Parameters #####
 threads: 1
 batch_name: test_batch
-primer_bed: /home3/bvv2t/bin/SARC-CoV-2-Scripts/Primers/nCoV-2019-NimaGen-V3.bed
-PE_primer_bed: /home3/bvv2t/bin/SARC-CoV-2-Scripts/Primers/nCoV-2019-NimaGen-PE-V3.bed
+primer_bed: resources/primers/nCoV-2019-NimaGen-V3.bed
+PE_primer_bed: resources/primers/nCoV-2019-NimaGen-PE-V3.bed
 
 ##### Resources #####
-ref_genome: /home3/bvv2t/bin/SARC-CoV-2-Scripts/Ref/MN908947.3.fa
-primer_dir: /home3/bvv2t/bin/SARC-CoV-2-Scripts/Primers/
+ref_genome: resources/ref/MN908947.3.fa
