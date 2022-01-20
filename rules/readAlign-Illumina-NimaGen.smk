@@ -171,8 +171,7 @@ rule generate_consensus:
     output:
         consensus = config["output_path"] + "/{sample}/{sample}_trimx2_ivar_consensus.fa"
     params:
-        out_path = config["output_path"] + "/{sample}/{sample}_trimx2_ivar_consensus",
-        threads = config["threads"]
+        out_path = config["output_path"] + "/{sample}/{sample}_trimx2_ivar_consensus"
     log:
         "logs/ivar_consensus/{sample}.log"
     shell:
@@ -187,6 +186,6 @@ rule generate_consensus:
         -p {params.out_path} \
         -n N \
         -t 0.6 \
-        -m {params.threads} \
+        -m 10 \
         2>{log}
         """
