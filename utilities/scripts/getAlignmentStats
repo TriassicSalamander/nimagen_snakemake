@@ -1,5 +1,5 @@
 #!/bin/bash
-#Developed by: Dr. Sreenu Vattipally
+#Developed by: Dr. Sreenu Vattipally at University of Glasgow
 
 
 usage() { echo "Usage: $0 -1 file1.fq [-2 file2.fq] -b file.bam [-s file.sam]" 1>&2; exit 1; }

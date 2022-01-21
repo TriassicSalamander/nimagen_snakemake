@@ -4,7 +4,7 @@
 # samtools depth -d 0 -aa $file.bam > $file.depth 
 # /home4/nCov/Sreenu/Scripts/ampliconDepth.awk /home4/nCov/Sreenu/Primers/nCoV-2019-V3.bed  $file.depth > $file.amplicon.cov
 #
-#Developed by: Dr. Sreenu Vattipally
+#Developed by: Dr. Sreenu Vattipally at University of Glasgow
 
 library(ggplot2)
 

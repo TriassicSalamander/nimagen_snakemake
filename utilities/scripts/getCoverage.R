@@ -5,7 +5,7 @@
 # awk 'BEGIN{print "Location \t Depth";}{print $(NF-1)"\t"$NF}' $file.depth > depth.$$
 # Rscript  /home4/nCov/Sreenu/Scripts/getCoverage.R depth.$$ $file
 #
-#Developed by: Dr. Sreenu Vattipally
+#Developed by: Dr. Sreenu Vattipally at University of Glasgow
 
 library(ggplot2)
 

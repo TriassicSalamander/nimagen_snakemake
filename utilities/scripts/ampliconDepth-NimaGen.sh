@@ -1,4 +1,4 @@
-#Developed by: Dr. Sreenu Vattipally
+#Developed by: Dr. Sreenu Vattipally at University of Glasgow
 
 samtools view -h $2 |\
 	awk -F '\t' '{
