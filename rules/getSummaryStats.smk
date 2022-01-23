@@ -70,3 +70,145 @@ rule collect_plots:
         cp $sample_plots {params.plot_directory}
         done 2>{log}
         """
+
+
+rule get_ambiguous_nucleotide_positions_and_N_counts:
+    input:
+        aligned_consensus = config["output_path"] + "/Summary/All-consensus_aligned.fa"
+    output:
+        ambig_nucs = config["output_path"] + "/Summary/ambig_nuc_pos.csv",
+        N_counts = config["output_path"] + "/Summary/consensus_N_counts.csv"
+    params:
+        script = config["scripts"] + "/getAmbiguousPositions.py",
+        ref_name = config["ref_genome"].split('/')[-1][:-3]
+    log:
+        "logs/getAmbPosAndNCounts.log"
+    shell:
+        r"""
+        python {params.script} \
+        {input.aligned_consensus} \
+        {params.ref_name} \
+        {output.ambig_nucs} \
+        {output.N_counts} \
+        2>{log}
+        """
+
+
+rule get_ambiguous_position_depth:
+    input:
+        ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
+    output:
+        ambig_pos = temp(config["output_path"] + "/Summary/ambig_pos"),
+        ambig_pos_dep = config["output_path"] + "/Summary/ambig_pos_depth.csv"
+    params:
+        sample_path_prefix = config["output_path"]
+    log:
+        "logs/getAmbPosDep.log"
+    shell:
+        r"""
+        echo -e 'Sequence ID,Position,Depth' > {output.ambig_pos_dep}
+
+        awk 'BEGIN {{FS=","}} {{OFS=","}} {{print $1,$3}}' {input.ambig_nucs} > {output.ambig_pos}
+
+        while read sample
+        do
+
+            while read position
+            do
+                awk -v sample="$sample" -v pos="$position" '{{OFS=","}} $2 == pos {{print sample,pos,$3}}' {params.sample_path_prefix}/$sample*/Depth_trimx2.tsv >> {output.ambig_pos_dep} #MAY NEED TO CHANGE THIS SECTION WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+            done < <(awk -v sample="$sample" '{{FS=","}} $1 == sample {{print $2}}' {output.ambig_pos})   #use list of ambiguous positions for given sample as input for loop
+
+        done < <(awk '{{FS=","}}(NR>1) {{print $1}}' {input.ambig_nucs} | uniq) 2>{log}   #use unique list of samples as input for loop
+        """
+
+
+rule get_ambiguous_position_counts:
+    input:
+        ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
+    output:
+        ambig_pos_count = config["output_path"] + "/Summary/ambig_pos_count.csv"
+    params:
+        script = config["scripts"] + "/getAmbPosCounts.py"
+    log:
+        "logs/getAmbPosCount.log"
+    shell:
+        r"""
+        python {params.script} \
+        {input.ambig_nucs} \
+        {output.ambig_pos_count} \
+        2>{log}
+        """
+
+
+#Not sure this is necessary as info is aslready in Stats.csv
+rule get_reference_coverage:
+    input:
+        all_bams = expand(config["output_path"] + "/{sample}/{sample}_trimx2.bam", sample=SAMPLES),
+        all_depth = expand(config["output_path"] + "/{sample}/Depth_trimx2.tsv", sample=SAMPLES)
+    output:
+        ref_cov = config["output_path"] + "/Summary/ref_cov.csv"
+    params:
+        sample_path_prefix = config["output_path"]
+    log:
+        "logs/getRefCov.log"
+    shell:
+        r"""
+        echo -e 'Sequence ID,Ref Length,Ref Coverage,Ref Coverage %' > {output.ref_cov}
+
+        bam_array=({input.all_bams})
+
+        for sample_bam in ${{bam_array[@]}}
+        do
+
+            sample_dir=$(dirname $sample_bam)
+            sample=$(echo $sample_dir | rev | cut -d / -f1 | rev | cut -d _ -f1)   #MAY NEED TO CHANGE THIS LINE WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+            refLength=$(samtools idxstats $sample_bam | awk 'NR==1{{print $(NF-2);}}')
+            refCoverage=$(awk '$NF< 10{{i++}};END{{print NR-i;}}' $sample_dir/Depth_trimx2.tsv)
+            covPerc=$(echo $refCoverage $refLength | awk '{{printf "%0.2f", $1 / $2 * 100}}')
+
+            echo $sample $refLength $refCoverage $covPerc | awk '{{OFS=","}} {{print $1,$2,$3+0,$4}}' >> {output.ref_cov}
+
+        done
+        """
+
+
+rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
+    input:
+        aligned_masked_consensus = config["output_path"] + "/Summary/All-masked-consensus_aligned.fa"
+    output:
+        masked_ambig_nucs = config["output_path"] + "/Summary/masked_ambig_nuc_pos.csv",
+        masked_N_counts = config["output_path"] + "/Summary/masked_consensus_N_counts.csv"
+    params:
+        script = config["scripts"] + "/getAmbiguousPositions.py",
+        ref_name = config["ref_genome"].split('/')[-1][:-3]
+    log:
+        "logs/getMaskedAmbPosAndNCounts.log"
+    shell:
+        r"""
+        python {params.script} \
+        {input.aligned_masked_consensus} \
+        {params.ref_name} \
+        {output.masked_ambig_nucs} \
+        {output.masked_N_counts} \
+        2>{log}
+        """
+
+
+rule assign_lineages:
+    input:
+        masked_consensus =  config["output_path"] + "/Summary/All-masked-consensus.fa"
+    output:
+        pangolin_report =  config["output_path"] + "/Summary/lineage_report.csv"
+    params:
+        threads = config["threads"],
+        out_dir = config["output_path"] + "/Summary/"
+    log:
+        "logs/pangolin.log"
+    shell:
+        r"""
+        pangolin \
+        {input.masked_consensus} \
+        -t {params.threads} \
+        -o {params.out_dir} \
+        2>{log}
+        """
