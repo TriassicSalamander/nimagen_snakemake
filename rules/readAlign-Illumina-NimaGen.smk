@@ -1,16 +1,61 @@
-##perl ~/bin/Sequence-manipulation/CountAmbig.pl -in ${sample}_trimx2_ivar_consensus.fa -detail > Ambiguous_trimx2.tsv
-##samtools depth -a -d 0 -o Depth_trimx2.tsv ${sample}_trimx2.bam
+
+##### Get Sample List #####
+sample_sheet = open(config["sample_sheet"], 'r')
+is_sample_id = False
+SAMPLE_IDS = []
+sample_count = 0
+for row in sample_sheet.readlines():
+    if is_sample_id == False:
+        if "Sample_ID" in row:
+            is_sample_id = True
+            continue
+        else:
+            continue
+    elif is_sample_id == True:
+        sample_count += 1
+        SAMPLE_IDS.append(row.split(',')[0] + '_S' + str(sample_count))
+sample_sheet.close()
 
 
 #GLOBAL WILDCARDS, not currently in use...
-SAMPLE_DIRS = [x.split('_')[0] for x in glob_wildcards(config["input_path"] + "/{sample}_R1_001.fastq.gz").sample]
-SAMPLES = glob_wildcards(config["input_path"] + "/{sample}_R1_001.fastq.gz").sample
+SAMPLE_DIRS = [x.split('_')[0] for x in glob_wildcards(config["fastq_directory"] + "/{sample}_R1_001.fastq.gz").sample]
+SAMPLES = glob_wildcards(config["fastq_directory"] + "/{sample}_R1_001.fastq.gz").sample
+
+
+#Flag --first-tile-only being used for testing, REMEMBER TO REMOVE.
+#bcl-convert is complaining about the output directory existing, though I can't see it.
+#Using --force to get around this for now.
+rule demultiplex_samples:
+    input:
+        run_dir = config["run_directory"]
+    output:
+        fastqs = expand(config["fastq_directory"] + "/{sample}_R{pair}_001.fastq.gz", sample=SAMPLE_IDS, pair=[1,2])
+    params:
+        fastq_dir = config["fastq_directory"],
+        sample_sheet = config["sample_sheet"],
+        bcl_threads = config["bcl-convert_threads"]
+    log:
+        "logs/bclConvert.log"
+    shell:
+        r"""
+        bcl-convert \
+        --bcl-input-directory {input.run_dir} \
+        --output-directory {params.fastq_dir} \
+        --sample-sheet {params.sample_sheet} \
+        --no-lane-splitting true \
+        --force \
+        --first-tile-only true \
+        --bcl-num-conversion-threads {params.bcl_threads} \
+        2>{log}
+
+        chmod -R 774 {params.fastq_dir} 2>{log}
+        """
 
 
 rule trim_reads:
     input:
-        fq1 = config["input_path"] + "/{sample}_R1_001.fastq.gz",
-        fq2 = config["input_path"] + "/{sample}_R2_001.fastq.gz"
+        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
+        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
 #        fq1 = expand(config["input_path"] + "/{sample}_R1_001.fastq.gz", sample=SAMPLES),
 #        fq2 = expand(config["input_path"] + "/{sample}_R2_001.fastq.gz", sample=SAMPLES)
     output:
