@@ -55,7 +55,7 @@ rule align_individual_consensus:
 
         cat {params.ref} >> {output.consensus_with_ref} 2>{log}
 
-        mafft {input.consensus_with_ref} > {output.aligned_consensus} 2>{log}
+        mafft {output.consensus_with_ref} > {output.aligned_consensus} 2>{log}
         """
 
 
@@ -136,4 +136,31 @@ rule align_masked_consensus:
         cat {params.ref} >> {output.masked_consensus_with_ref} 2>{log}
 
         mafft {output.masked_consensus_with_ref} > {output.aligned_masked_consensus} 2>{log}
+        """
+
+
+rule make_climb_dir:
+    input:
+        sample_bams = expand(config["output_path"] + "/{sample}/{sample}_trimx2.bam", sample=SAMPLES),
+        masked_consensus = expand(config["output_path"] + "/{sample}/{sample}_masked_consensus.fa", sample=SAMPLES)
+    output:
+        climb_bam = expand(config["output_path"] + "/ClimbSeq/{sample}/{sample}.bam", sample=SHORTENED_SAMPLE_IDS),
+        climb_fasta = expand(config["output_path"] + "/ClimbSeq/{sample}/{sample}.fa", sample=SHORTENED_SAMPLE_IDS)
+    params:
+        out_path = config["output_path"],
+        climb_dir = config["output_path"] + "/ClimbSeq"
+    log:
+        "logs/makeClimbDir.log"
+    shell:
+        r"""
+        bam_array=({input.sample_bams})
+
+        for sample_bam in ${{bam_array[@]}}
+        do
+
+        newName=$(echo $sample_bam | rev | cut -d / -f1 | rev | cut -d _ -f1)   #MAY NEED TO CHANGE THIS SECTION WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+        cp {params.out_path}/$newName*/$newName*_trimx2.bam {params.climb_dir}/$newName/$newName.bam
+        awk '{{if($1~/>/){{split(FILENAME,a,"_"); print ">"a[1];}} else print}}' {params.out_path}/$newName*/$newName*_masked_consensus.fa > {params.climb_dir}/$newName/$newName.fa
+
+        done 2>{log}
         """
