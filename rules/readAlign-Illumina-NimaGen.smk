@@ -1,7 +1,4 @@
 
-#Flag --first-tile-only being used for testing, REMEMBER TO REMOVE when testing full datasets.
-#bcl-convert is complaining about the output directory existing, though I can't see it.
-#Using --force to get around this for now.
 rule demultiplex_samples:
     input:
         run_dir = config["run_directory"]
@@ -20,8 +17,6 @@ rule demultiplex_samples:
         --output-directory {params.fastq_dir} \
         --sample-sheet {params.sample_sheet} \
         --no-lane-splitting true \
-        --force \
-        --first-tile-only true \
         --bcl-num-conversion-threads {params.bcl_threads} \
         2>{log}
 
