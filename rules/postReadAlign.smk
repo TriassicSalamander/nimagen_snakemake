@@ -44,7 +44,7 @@ rule align_individual_consensus:
         sample_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus.fa"
     output:
         consensus_with_ref = temp(config["samples_dir"] + "/{sample_dir}/{sample}_consensus_with_ref.fa"),
-        aligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_consensus_with_ref_aligned.fa"
+        aligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_consensus_aligned.fa"
     params:
         ref = config["ref_genome"]
     log:
@@ -63,7 +63,7 @@ rule mask_ambiguous_nucleotides:
     input:
         aligned_ind_consensus = rules.align_individual_consensus.output.aligned_consensus
     output:
-        masked_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_aligned_masked_consensus.fa"
+        masked_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_masked_consensus_aligned.fa"
     params:
         script = config["scripts"] + "/maskAmbNucs.py",
         mask_regions = config["ambig_regions"]
@@ -160,7 +160,7 @@ rule make_climb_dir:
 
         newName=$(echo $sample_bam | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         cp $sample_bam {params.climb_dir}/$newName/$newName.bam
-        awk '{{if($1~/>/){{split(FILENAME,a,"_"); print ">"a[1];}} else print}}' {params.sample_path}/$newName/$newName*_masked_consensus.fa > {params.climb_dir}/$newName/$newName.fa
+        awk -v newName="$newName" '{{if($1~/>/){{print ">"newName;}} else print}}' {params.sample_path}/$newName/$newName*_masked_consensus.fa > {params.climb_dir}/$newName/$newName.fa
 
         done 2>{log}
         """
