@@ -1,11 +1,11 @@
 
 rule get_summary_stats:
     input:
-        all_stats = expand(config["output_path"] + "/{sample}/{sample}.stat", sample=SAMPLES)
+        all_stats = expand(config["samples_dir"] + "/{sample_dir}/{sample}.stat", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
-        sum_stats = config["output_path"] + "/Summary/Stats.csv"        
+        sum_stats = config["summary_dir"] + "/Stats.csv"        
     log:
-        "logs/sum_stats.log"
+        "logs/sumStats.log"
     shell:
         r"""
         echo "Sample,Total reads,Mapped reads,Mapped reads(>30nt), Mapped read %,Ref name,Ref Length,Ref Coverage,Ref coverage %,Average Depth,Min Depth,Max Depth" > {output.sum_stats};
@@ -14,7 +14,7 @@ rule get_summary_stats:
 
         for sample_stat in ${{sample_array[@]}}
         do
-        sample=$(echo $sample_stat | cut -d / -f2 | cut -d _ -f1)   #MAY NEED TO CHANGE THIS LINE WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         echo -n "$sample,";
 
         cat $sample_stat |awk '{{for(i=1;i<=NF;i++) printf "%s, ",$i; print ""; }}'
@@ -26,11 +26,11 @@ rule get_summary_stats:
 
 rule get_summary_amplicon_coverage:
     input:
-        all_amp_cov = expand(config["output_path"] + "/{sample}/{sample}.amplicon.cov", sample=SAMPLES)
+        all_amp_cov = expand(config["samples_dir"] + "/{sample_dir}/{sample}.amplicon.cov", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
-        sum_amp_cov = config["output_path"] + "/Summary/ampliconDepth.csv"
+        sum_amp_cov = config["summary_dir"] + "/ampliconDepth.csv"
     log:
-        "logs/sum_amp_cov.log"
+        "logs/sumAmpCov.log"
     shell:
         r"""
         sample_array=({input.all_amp_cov})
@@ -38,7 +38,7 @@ rule get_summary_amplicon_coverage:
         samples=()
         for sample_stat in ${{sample_array[@]}}
         do
-        sample=$(echo $sample_stat | cut -d / -f2 | cut -d _ -f1)   #MAY NEED TO CHANGE THIS SECTION WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         samples+=( $sample )
         done 2>{log}
 
@@ -50,18 +50,22 @@ rule get_summary_amplicon_coverage:
 
 rule collect_plots:
     input:
-        all_plots = expand(config["output_path"] + "/{sample}/{sample}-{plot_type}.pdf", sample=SAMPLES, plot_type=["Amplicon-Depth","coverage"])
+        amp_dep_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample}-Amplicon-Depth.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
+        cov_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample}-coverage.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
-        collected_plots = expand(config["output_path"] + "/Summary/CoveragePlots/{sample}-{plot_type}.pdf", sample=SAMPLES, plot_type=["Amplicon-Depth","coverage"])
+        collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample}-Amplicon-Depth.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
+        collected_cov = expand(config["summary_dir"] + "/CoveragePlots/{sample}-coverage.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     params:
-        plot_directory = config["output_path"] + "/Summary/CoveragePlots/"
+        plot_directory = config["summary_dir"] + "/CoveragePlots/"
     log:
-        "logs/collect_plots.log"
+        "logs/collectPlots.log"
     shell:
         r"""
-        sample_array=({input.all_plots})
+        amp_dep_array=({input.amp_dep_plots})
+        cov_array=({input.cov_plots})
+        all_plots=(${{amp_dep_array[@]}} ${{cov_array[@]}})
 
-        for sample_plots in ${{sample_array[@]}}
+        for sample_plots in ${{all_plots[@]}}
         do
         cp $sample_plots {params.plot_directory}
         done 2>{log}
@@ -70,10 +74,10 @@ rule collect_plots:
 
 rule get_ambiguous_nucleotide_positions_and_N_counts:
     input:
-        aligned_consensus = config["output_path"] + "/Summary/All-consensus_aligned.fa"
+        aligned_consensus = config["summary_dir"] + "/All-consensus_aligned.fa"
     output:
-        ambig_nucs = config["output_path"] + "/Summary/ambig_nuc_pos.csv",
-        N_counts = config["output_path"] + "/Summary/consensus_N_counts.csv"
+        ambig_nucs = config["summary_dir"] + "/ambig_nuc_pos.csv",
+        N_counts = config["summary_dir"] + "/consensus_N_counts.csv"
     params:
         script = config["scripts"] + "/getAmbiguousPositions.py",
         ref_name = config["ref_genome"].split('/')[-1][:-3]
@@ -94,10 +98,10 @@ rule get_ambiguous_position_depth:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
     output:
-        ambig_pos = temp(config["output_path"] + "/Summary/ambig_pos"),
-        ambig_pos_dep = config["output_path"] + "/Summary/ambig_pos_depth.csv"
+        ambig_pos = temp(config["summary_dir"] + "/ambig_pos"),
+        ambig_pos_dep = config["summary_dir"] + "/ambig_pos_depth.csv"
     params:
-        sample_path_prefix = config["output_path"]
+        sample_path_prefix = config["summary_dir"]
     log:
         "logs/getAmbPosDep.log"
     shell:
@@ -122,7 +126,7 @@ rule get_ambiguous_position_counts:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
     output:
-        ambig_pos_count = config["output_path"] + "/Summary/ambig_pos_count.csv"
+        ambig_pos_count = config["summary_dir"] + "/ambig_pos_count.csv"
     params:
         script = config["scripts"] + "/getAmbPosCounts.py"
     log:
@@ -139,12 +143,10 @@ rule get_ambiguous_position_counts:
 #Not sure this is necessary as info is aslready in Stats.csv
 rule get_reference_coverage:
     input:
-        all_bams = expand(config["output_path"] + "/{sample}/{sample}_trimx2.bam", sample=SAMPLES),
-        all_depth = expand(config["output_path"] + "/{sample}/Depth_trimx2.tsv", sample=SAMPLES)
+        all_bams = expand(config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_sorted.bam", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
+        all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample}_Depth_trimx2.tsv", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
-        ref_cov = config["output_path"] + "/Summary/ref_cov.csv"
-    params:
-        sample_path_prefix = config["output_path"]
+        ref_cov = config["summary_dir"] + "/ref_cov.csv"
     log:
         "logs/getRefCov.log"
     shell:
@@ -157,23 +159,23 @@ rule get_reference_coverage:
         do
 
             sample_dir=$(dirname $sample_bam)
-            sample=$(echo $sample_dir | rev | cut -d / -f1 | rev | cut -d _ -f1)   #MAY NEED TO CHANGE THIS LINE WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+            sample=$(echo $sample_dir | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
             refLength=$(samtools idxstats $sample_bam | awk 'NR==1{{print $(NF-2);}}')
             refCoverage=$(awk '$NF< 10{{i++}};END{{print NR-i;}}' $sample_dir/Depth_trimx2.tsv)
             covPerc=$(echo $refCoverage $refLength | awk '{{printf "%0.2f", $1 / $2 * 100}}')
 
             echo $sample $refLength $refCoverage $covPerc | awk '{{OFS=","}} {{print $1,$2,$3+0,$4}}' >> {output.ref_cov}
 
-        done
+        done 2>{log}
         """
 
 
 rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
     input:
-        aligned_masked_consensus = config["output_path"] + "/Summary/All-masked-consensus_aligned.fa"
+        aligned_masked_consensus = config["summary_dir"] + "/All-masked-consensus_aligned.fa"
     output:
-        masked_ambig_nucs = config["output_path"] + "/Summary/masked_ambig_nuc_pos.csv",
-        masked_N_counts = config["output_path"] + "/Summary/masked_consensus_N_counts.csv"
+        masked_ambig_nucs = config["summary_dir"] + "/masked_ambig_nuc_pos.csv",
+        masked_N_counts = config["summary_dir"] + "/masked_consensus_N_counts.csv"
     params:
         script = config["scripts"] + "/getAmbiguousPositions.py",
         ref_name = config["ref_genome"].split('/')[-1][:-3]
@@ -192,12 +194,12 @@ rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
 
 rule assign_lineages:
     input:
-        masked_consensus =  config["output_path"] + "/Summary/All-masked-consensus.fa"
+        masked_consensus =  config["summary_dir"] + "/All-masked-consensus.fa"
     output:
-        pangolin_report =  config["output_path"] + "/Summary/lineage_report.csv"
+        pangolin_report =  config["summary_dir"] + "/lineage_report.csv"
     params:
         threads = config["threads"],
-        out_dir = config["output_path"] + "/Summary/"
+        out_dir = config["summary_dir"]
     log:
         "logs/pangolin.log"
     shell:

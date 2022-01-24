@@ -1,12 +1,12 @@
 
-#Flag --first-tile-only being used for testing, REMEMBER TO REMOVE.
+#Flag --first-tile-only being used for testing, REMEMBER TO REMOVE when testing full datasets.
 #bcl-convert is complaining about the output directory existing, though I can't see it.
 #Using --force to get around this for now.
 rule demultiplex_samples:
     input:
         run_dir = config["run_directory"]
     output:
-        fastqs = expand(config["fastq_directory"] + "/{sample}_R{pair}_001.fastq.gz", sample=SAMPLE_IDS, pair=[1,2])
+        fastqs = expand(config["fastq_directory"] + "/{sample}_R{pair}_001.fastq.gz", sample=SAMPLES, pair=[1,2])
     params:
         fastq_dir = config["fastq_directory"],
         sample_sheet = config["sample_sheet"],
@@ -25,36 +25,31 @@ rule demultiplex_samples:
         --bcl-num-conversion-threads {params.bcl_threads} \
         2>{log}
 
-        chmod -R 774 {params.fastq_dir} 2>{log}
+        chmod -R 774 {params.fastq_dir} 2>>{log}
         """
 
 
 rule trim_reads:
     input:
-        fq1 = "test_input" + "/{sample}_R1_001.fastq.gz",
-        fq2 = "test_input" + "/{sample}_R2_001.fastq.gz"
-#        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
-#        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
-#        fq1 = expand(config["input_path"] + "/{sample}_R1_001.fastq.gz", sample=SAMPLES),
-#        fq2 = expand(config["input_path"] + "/{sample}_R2_001.fastq.gz", sample=SAMPLES)
+        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
+        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
     output:
-        trimmed1 = config["output_path"] + "/{sample}/{sample}_val_1.fq",
-        trimmed2 = config["output_path"] + "/{sample}/{sample}_val_2.fq"
-#        trimmed1 = expand(config["output_path"] + "/{sample_dir}/{sample}_val_1.fq", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
-#        trimmed2 = expand(config["output_path"] + "/{sample_dir}/{sample}_val_2.fq", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        trimmed1 = config["samples_dir"] + "/{sample_dir}/{sample}_val_1.fq",
+        trimmed2 = config["samples_dir"] + "/{sample_dir}/{sample}_val_2.fq"
     params:
-        out_path = config["output_path"] + "/{sample}/",
-#        out_path = expand(config["output_path"] + "/{sample_dir}/", sample_dir=SAMPLE_DIRS),
-#        out_base = expand("{sample}", sample=SAMPLES)
+        path_prefix = config["samples_dir"]
     log:
-        "logs/trim_galore/{sample}.log"
+        "logs/trimGalore/{sample_dir}/{sample}.log"
     shell:
         r"""
+        sample_dir=$(echo {wildcards.sample} | cut -d _ -f 1)
+        out_path={params.path_prefix}/$sample_dir
+
         trim_galore \
         --nextseq 30 \
         --dont_gzip \
         --length 50 \
-        -o {params.out_path} \
+        -o $out_path \
         --basename {wildcards.sample} \
         --paired {input.fq1} {input.fq2} \
         > /dev/null  2>{log}
@@ -66,12 +61,12 @@ rule prinseq_trim:
         trimmed1 = rules.trim_reads.output.trimmed1,
         trimmed2 = rules.trim_reads.output.trimmed2
     output:
-        prin_trim1 = config["output_path"] + "/{sample}/{sample}_prinseq_1.fastq",
-        prin_trim2 = config["output_path"] + "/{sample}/{sample}_prinseq_2.fastq"
+        prin_trim1 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_1.fastq",
+        prin_trim2 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_2.fastq"
     params:
-        out_path = config["output_path"] + "/{sample}/"
+        out_path = config["samples_dir"] + "/{sample_dir}/"
     log:
-        "logs/prinseq/{sample}.log"
+        "logs/prinseq/{sample_dir}/{sample}.log"
     shell:
         r"""
         prinseq-lite.pl \
@@ -90,13 +85,12 @@ rule align_reads:
         prin_trim1 = rules.prinseq_trim.output.prin_trim1,
         prin_trim2 = rules.prinseq_trim.output.prin_trim2
     output:
-        bam = config["output_path"] + "/{sample}/{sample}.bam"
+        bam = config["samples_dir"] + "/{sample_dir}/{sample}.bam"
     params:
         ref = config["ref_genome"],
-        threads = config["threads"],
-        out_path = config["output_path"] + "/{sample}/"
+        threads = config["threads"]
     log:
-        "logs/bwamem/{sample}.log"
+        "logs/bwamem/{sample_dir}/{sample}.log"
     shell:
         r"""
         bwa mem \
@@ -118,9 +112,9 @@ rule bam_index:
     input:
         bam = rules.align_reads.output.bam
     output:
-        index = config["output_path"] + "/{sample}/{sample}.bam.bai"
+        index = config["samples_dir"] + "/{sample_dir}/{sample}.bam.bai"
     log:
-        "logs/samindex/{sample}.log"
+        "logs/samindex/{sample_dir}/{sample}.log"
     shell:
         r"""
         samtools index \
@@ -135,12 +129,12 @@ rule ivar_trim:
         bam = rules.align_reads.output.bam,
         index = rules.bam_index.output.index
     output:
-        ivar_trimmed = config["output_path"] + "/{sample}/{sample}_trimx2.bam"
+        ivar_trimmed = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2.bam"
     params:
-        out_path = config["output_path"] + "/{sample}/{sample}_trimx2",
+        out_path = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2",
         primer = config["primer_bed"]
     log:
-        "logs/ivartrim/{sample}.log"
+        "logs/ivartrim/{sample_dir}/{sample}.log"
     shell:
         r"""
         ivar trim \
@@ -157,11 +151,11 @@ rule sort_ivar_trimmed:
     input:
         ivar_trimmed = rules.ivar_trim.output.ivar_trimmed
     output:
-        ivar_trim_sorted = config["output_path"] + "/{sample}/{sample}_trimx2_sorted.bam"
+        ivar_trim_sorted = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_sorted.bam"
     params:
         threads = config["threads"]
     log:
-        "logs/samsort_ivar/{sample}.log"
+        "logs/samsortIvar/{sample_dir}/{sample}.log"
     shell:
         r"""
         samtools sort \
@@ -176,9 +170,9 @@ rule index_ivar_trimmed:
     input:
         bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted
     output:
-        index = config["output_path"] + "/{sample}/{sample}_trimx2.bam.bai"
+        index = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2.bam.bai"
     log:
-        "logs/samindex_ivar/{sample}.log"
+        "logs/samindexIvar/{sample_dir}/{sample}.log"
     shell:
         r"""
         samtools index \
@@ -193,11 +187,11 @@ rule generate_consensus:
         ivar_bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted,
         ivar_bam_index = rules.index_ivar_trimmed.output.index
     output:
-        consensus = config["output_path"] + "/{sample}/{sample}_trimx2_ivar_consensus.fa"
+        consensus = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus.fa"
     params:
-        out_path = config["output_path"] + "/{sample}/{sample}_trimx2_ivar_consensus"
+        out_path = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus"
     log:
-        "logs/ivar_consensus/{sample}.log"
+        "logs/ivarConsensus/{sample_dir}/{sample}.log"
     shell:
         r"""
         samtools mpileup \
