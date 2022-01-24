@@ -1,27 +1,4 @@
 
-##### Get Sample List #####
-sample_sheet = open(config["sample_sheet"], 'r')
-is_sample_id = False
-SAMPLE_IDS = []
-sample_count = 0
-for row in sample_sheet.readlines():
-    if is_sample_id == False:
-        if "Sample_ID" in row:
-            is_sample_id = True
-            continue
-        else:
-            continue
-    elif is_sample_id == True:
-        sample_count += 1
-        SAMPLE_IDS.append(row.split(',')[0] + '_S' + str(sample_count))
-sample_sheet.close()
-
-
-#GLOBAL WILDCARDS, not currently in use...
-SAMPLE_DIRS = [x.split('_')[0] for x in glob_wildcards(config["fastq_directory"] + "/{sample}_R1_001.fastq.gz").sample]
-SAMPLES = glob_wildcards(config["fastq_directory"] + "/{sample}_R1_001.fastq.gz").sample
-
-
 #Flag --first-tile-only being used for testing, REMEMBER TO REMOVE.
 #bcl-convert is complaining about the output directory existing, though I can't see it.
 #Using --force to get around this for now.
@@ -54,8 +31,10 @@ rule demultiplex_samples:
 
 rule trim_reads:
     input:
-        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
-        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
+        fq1 = "test_input" + "/{sample}_R1_001.fastq.gz",
+        fq2 = "test_input" + "/{sample}_R2_001.fastq.gz"
+#        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
+#        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
 #        fq1 = expand(config["input_path"] + "/{sample}_R1_001.fastq.gz", sample=SAMPLES),
 #        fq2 = expand(config["input_path"] + "/{sample}_R2_001.fastq.gz", sample=SAMPLES)
     output:
@@ -127,11 +106,11 @@ rule align_reads:
         {input.prin_trim2} \
         2>{log} \
 	| samtools view -F4 -bS - \
-        2>{log}
+        2>>{log} \
         | samtools sort \
         -@{params.threads} \
         -o {output.bam} -
-        2>{log}
+        2>>{log}
         """
 
 
