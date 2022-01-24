@@ -96,12 +96,13 @@ rule get_ambiguous_nucleotide_positions_and_N_counts:
 
 rule get_ambiguous_position_depth:
     input:
-        ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
+        ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs,
+        all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample}_Depth_trimx2.tsv", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
         ambig_pos = temp(config["summary_dir"] + "/ambig_pos"),
         ambig_pos_dep = config["summary_dir"] + "/ambig_pos_depth.csv"
     params:
-        sample_path_prefix = config["summary_dir"]
+        sample_path_prefix = config["samples_dir"]
     log:
         "logs/getAmbPosDep.log"
     shell:
@@ -115,7 +116,7 @@ rule get_ambiguous_position_depth:
 
             while read position
             do
-                awk -v sample="$sample" -v pos="$position" '{{OFS=","}} $2 == pos {{print sample,pos,$3}}' {params.sample_path_prefix}/$sample*/Depth_trimx2.tsv >> {output.ambig_pos_dep} #MAY NEED TO CHANGE THIS SECTION WHEN I FIGURE OUT HOW TO SHORTEN THE SAMPLE DIRECTORY NAMES
+                awk -v sample="$sample" -v pos="$position" '{{OFS=","}} $2 == pos {{print sample,pos,$3}}' {params.sample_path_prefix}/$sample/$sample*_Depth_trimx2.tsv >> {output.ambig_pos_dep}
             done < <(awk -v sample="$sample" '{{FS=","}} $1 == sample {{print $2}}' {output.ambig_pos})   #use list of ambiguous positions for given sample as input for loop
 
         done < <(awk '{{FS=","}}(NR>1) {{print $1}}' {input.ambig_nucs} | uniq) 2>{log}   #use unique list of samples as input for loop
