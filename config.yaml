@@ -1,18 +1,24 @@
 ##### Input Paths #####
-input_path: test_input
+#Sample sheet would normally be runDir/SampleSheet.csv by default
+sample_sheet: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Runs/211217_NB551552_0119_AHG5WWAFX3/SampleSheet_run119.csv
+run_directory: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Runs/211217_NB551552_0119_AHG5WWAFX3
+fastq_directory: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Fastq/211217_NB551552_0119_AHG5WWAFX3
 
 ##### Output Paths ######
-output_path: test_output
+output_path: output
+batch_dir: output/batch190rep2
+samples_dir: output/batch190rep2/Samples
+summary_dir: output/batch190rep2/Summary
 
 ##### Other Parameters #####
-threads: 1
-batch_name: test_batch
+threads: 5
+bcl-convert_threads: 26
 
 ##### Resources #####
 ref_genome: resources/ref/MN908947.3.fa
 primer_bed: resources/primers/nCoV-2019-NimaGen-V3.bed
 PE_primer_bed: resources/primers/nCoV-2019-NimaGen-PE-V3.bed
-ambig_regions: resources/amig_regions
+ambig_regions: resources/ambig_regions
 
 ##### Utilities
 scripts: utilities/scripts
