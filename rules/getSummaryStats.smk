@@ -1,7 +1,3 @@
-#Global Wildcards
-SAMPLE_DIRS = [x.split('_')[0] for x in glob_wildcards(config["input_path"] + "/{sample}_R1_001.fastq.gz").sample]
-SAMPLES = glob_wildcards(config["input_path"] + "/{sample}_R1_001.fastq.gz").sample
-
 
 rule get_summary_stats:
     input:
