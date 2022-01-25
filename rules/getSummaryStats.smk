@@ -84,7 +84,7 @@ rule get_ambiguous_nucleotide_positions_and_N_counts:
     input:
         aligned_consensus = config["summary_dir"] + "/All-consensus_aligned.fa"
     output:
-        ambig_nucs = config["summary_dir"] + "/ambig_nuc_pos.csv",
+        ambig_nucs = temp(config["summary_dir"] + ("/ambig_nuc_pos.csv")),
         N_counts = config["summary_dir"] + "/consensus_N_counts.csv"
     params:
         script = config["scripts"] + "/getAmbiguousPositions.py",
@@ -108,7 +108,7 @@ rule get_ambiguous_position_depth:
         all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample}_Depth_trimx2.tsv", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
         ambig_pos = temp(config["summary_dir"] + "/ambig_pos"),
-        ambig_pos_dep = config["summary_dir"] + "/ambig_pos_depth.csv"
+        ambig_pos_dep = temp(config["summary_dir"] + "/ambig_pos_depth.csv")
     params:
         sample_path_prefix = config["samples_dir"]
     log:
@@ -129,6 +129,23 @@ rule get_ambiguous_position_depth:
 
         done < <(awk '{{FS=","}}(NR>1) {{print $1}}' {input.ambig_nucs} | uniq) 2>{log}   #use unique list of samples as input for loop
         """
+
+
+rule combine_ambig_nuc_pos_and_depth:
+    input:
+        ambig_pos = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs,
+        ambig_dep = rules.get_ambiguous_position_depth.output.ambig_pos_dep
+    output:
+        ambig_pos_and_dep = config["summary_dir"] + "/ambig_nuc_pos_and_dep.csv"
+    log:
+        "logs/combineAmbigPosDep.log"
+    run:
+        import pandas as pd
+
+        pos_df = pd.read_csv(input.ambig_pos)
+        dep_df = pd.read_csv(input.ambig_dep)
+        combined_df = pd.merge(pos_df,dep_df)
+        combined_df.to_csv(output.ambig_pos_and_dep, index=False)
 
 
 rule get_ambiguous_position_counts:
