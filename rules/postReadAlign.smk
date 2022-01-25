@@ -10,7 +10,11 @@ rule aggregate_consensus:
         r"""
         sample_array=({input.consensus_files})
 
-        for sample_consensus in ${{sample_array[@]}}
+        IFS=$'\n'
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        unset IFS
+
+        for sample_consensus in ${{sorted_samples[@]}}
         do
         fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f1)
         awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus
@@ -110,7 +114,11 @@ rule aggregate_masked_consensus:
         r"""
         sample_array=({input.masked_consensus_files})
 
-        for sample_consensus in ${{sample_array[@]}}
+        IFS=$'\n'
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        unset IFS
+
+        for sample_consensus in ${{sorted_samples[@]}}
         do
         fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus

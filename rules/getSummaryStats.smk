@@ -12,7 +12,11 @@ rule get_summary_stats:
 
         sample_array=({input.all_stats})
 
-        for sample_stat in ${{sample_array[@]}}
+        IFS=$'\n'
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        unset IFS
+
+        for sample_stat in ${{sorted_samples[@]}}
         do
         sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         echo -n "$sample,";
@@ -35,8 +39,12 @@ rule get_summary_amplicon_coverage:
         r"""
         sample_array=({input.all_amp_cov})
 
+        IFS=$'\n'
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        unset IFS
+
         samples=()
-        for sample_stat in ${{sample_array[@]}}
+        for sample_stat in ${{sorted_samples[@]}}
         do
         sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
         samples+=( $sample )
@@ -156,7 +164,11 @@ rule get_reference_coverage:
 
         bam_array=({input.all_bams})
 
-        for sample_bam in ${{bam_array[@]}}
+        IFS=$'\n'
+        sorted_samples=($(sort <<<"${{bam_array[*]}}"))
+        unset IFS
+
+        for sample_bam in ${{sorted_samples[@]}}
         do
 
             sample_dir=$(dirname $sample_bam)
