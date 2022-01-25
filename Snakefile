@@ -12,7 +12,7 @@ if config.get("output_path"):
 ##### Get Sample IDs from Sample Sheet #####
 sample_sheet = open(config["sample_sheet"], 'r')
 is_sample_id = False
-SAMPLES = []
+SAMPLES = ['Undetermined_S0']   #Inserting Undetermined manually since it won't be in sample sheet
 sample_count = 0
 for row in sample_sheet.readlines():
     if is_sample_id == False:
