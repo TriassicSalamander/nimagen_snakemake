@@ -46,7 +46,7 @@ def get_ref_seq_aligned_map(fasta, ref_name):
 
 def main(fasta, ref_name, amb_tsv, N_counts):
     ambig_chars = ['B', 'D', 'H', 'K', 'M', 'R', 'S', 'V', 'W', 'Y'] 				#list of ambiguous nucleotide characters
-    pos_map = get_ref_seq_aligned_map(fasta, ref_name) 							#get map of where a base in an aligned seq corresponds to in the unaligned reference
+    pos_map = get_ref_seq_aligned_map(fasta, ref_name)						#get map of where a base in an aligned seq corresponds to in the unaligned reference
     with open(amb_tsv,'w') as out_ambs, open(N_counts, 'w') as out_Ns: 				#create files to write to
         out_ambs.write('Sequence ID,Ambiguous Base,Position\n') 				#create header line
         out_Ns.write('Sequence ID,N Count\n') 							#create header line for N count file
