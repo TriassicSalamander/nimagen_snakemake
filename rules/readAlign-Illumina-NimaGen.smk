@@ -59,19 +59,25 @@ rule prinseq_trim:
         prin_trim1 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_1.fastq",
         prin_trim2 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_2.fastq"
     params:
+        threads = config["threads"],
         out_path = config["samples_dir"] + "/{sample_dir}/"
     log:
         "logs/prinseq/{sample_dir}/{sample}.log"
     shell:
         r"""
-        prinseq-lite.pl \
+        prinseq++ \
         -trim_qual_right 30 \
         -fastq {input.trimmed1} \
         -fastq2 {input.trimmed2} \
-        -out_good {params.out_path}{wildcards.sample}_prinseq \
-        -out_bad {params.out_path}{wildcards.sample}_bad \
+        -threads {params.threads} \
+        -out_good {output.prin_trim1} \
+        -out_good2 {output.prin_trim2} \
+        -out_bad {params.out_path}{wildcards.sample}_bad_1.fastq \
+        -out_bad2 {params.out_path}{wildcards.sample}_bad_2.fastq \
+        -out_single {params.out_path}{wildcards.sample}_single_1.fastq \
+        -out_single2 {params.out_path}{wildcards.sample}_single_2.fastq \
         -min_len 50 \
-        -log {log}
+        2>{log}
         """
 
 
