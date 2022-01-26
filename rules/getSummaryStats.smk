@@ -3,7 +3,7 @@ rule get_summary_stats:
     input:
         all_stats = expand(config["samples_dir"] + "/{sample_dir}/{sample}.stat", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
     output:
-        sum_stats = config["summary_dir"] + "/Stats.csv"        
+        sum_stats = temp(config["summary_dir"] + "/Stats_temp.csv")
     log:
         "logs/sumStats.log"
     shell:
@@ -85,7 +85,7 @@ rule get_ambiguous_nucleotide_positions_and_N_counts:
         aligned_consensus = config["summary_dir"] + "/All-consensus_aligned.fa"
     output:
         ambig_nucs = temp(config["summary_dir"] + ("/ambig_nuc_pos.csv")),
-        N_counts = config["summary_dir"] + "/consensus_N_counts.csv"
+        N_counts = temp(config["summary_dir"] + "/consensus_N_counts.csv")
     params:
         script = config["scripts"] + "/getAmbiguousPositions.py",
         ref_name = config["ref_genome"].split('/')[-1][:-3]
@@ -152,7 +152,7 @@ rule get_ambiguous_position_counts:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
     output:
-        ambig_pos_count = config["summary_dir"] + "/ambig_pos_count.csv"
+        ambig_pos_count = temp(config["summary_dir"] + "/ambig_pos_count.csv")
     params:
         script = config["scripts"] + "/getAmbPosCounts.py"
     log:
@@ -164,6 +164,33 @@ rule get_ambiguous_position_counts:
         {output.ambig_pos_count} \
         2>{log}
         """
+
+
+rule add_N_and_ambig_counts_to_stats:
+    input:
+        stats = rules.get_summary_stats.output.sum_stats,
+        N_counts = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.N_counts,
+        ambig_counts = rules.get_ambiguous_position_counts.output.ambig_pos_count
+    output:
+        stats = config["summary_dir"] + "/Stats.csv"
+    run:
+        import pandas as pd
+
+        stats_df = pd.read_csv(input.stats, index_col=False)
+
+        N_count_df = pd.read_csv(input.N_counts, index_col=False)
+        N_count_df.rename(columns={'Sequence ID':'Sample'}, inplace=True)
+
+        ambig_count_df = pd.read_csv(input.ambig_counts, index_col=False)
+        ambig_count_df.rename(columns={'Sequence ID':'Sample'}, inplace=True)
+
+        stats_N_count = pd.merge(stats_df, N_count_df, how='left', on='Sample')
+        stats_N_ambig_count = pd.merge(stats_N_count, ambig_count_df, how='left', on='Sample')
+
+        stats_N_ambig_count.fillna(0, downcast='infer', inplace=True)
+
+        stats_N_ambig_count.to_csv(output.stats, index=False)
+
 
 
 #Not sure this is necessary as info is aslready in Stats.csv
