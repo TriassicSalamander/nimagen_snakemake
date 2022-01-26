@@ -1,4 +1,4 @@
-name: nimagen_snakemake_prin
+name: nimagen_snakemake
 channels:
   - bioconda
   - conda-forge
