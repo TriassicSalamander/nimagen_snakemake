@@ -179,10 +179,10 @@ rule add_N_and_ambig_counts_to_stats:
         stats_df = pd.read_csv(input.stats, index_col=False)
 
         N_count_df = pd.read_csv(input.N_counts, index_col=False)
-        N_count_df.rename(columns={'Sequence ID':'Sample'}, inplace=True)
+        N_count_df.rename(columns={'Sequence ID':'Sample', 'N Count':'Consensus N Count'}, inplace=True)
 
         ambig_count_df = pd.read_csv(input.ambig_counts, index_col=False)
-        ambig_count_df.rename(columns={'Sequence ID':'Sample'}, inplace=True)
+        ambig_count_df.rename(columns={'Sequence ID':'Sample', 'Amb Count':'Ambiguous Nucleotide Count'}, inplace=True)
 
         stats_N_count = pd.merge(stats_df, N_count_df, how='left', on='Sample')
         stats_N_ambig_count = pd.merge(stats_N_count, ambig_count_df, how='left', on='Sample')
