@@ -26,8 +26,8 @@ rule demultiplex_samples:
 
 rule trim_reads:
     input:
-        fq1 = config["fastq_directory"] + "/{sample}_R1_001.fastq.gz",
-        fq2 = config["fastq_directory"] + "/{sample}_R2_001.fastq.gz"
+        fq1 = lambda wildcards: config["fastq_directory"] + "/" + SAMPLES_DICT[wildcards.sample_dir] + "_R1_001.fastq.gz",
+        fq2 = lambda wildcards: config["fastq_directory"] + "/" + SAMPLES_DICT[wildcards.sample_dir] + "_R2_001.fastq.gz"
     output:
         trimmed1 = config["samples_dir"] + "/{sample_dir}/{sample}_val_1.fq",
         trimmed2 = config["samples_dir"] + "/{sample_dir}/{sample}_val_2.fq"
@@ -53,16 +53,16 @@ rule trim_reads:
 
 rule prinseq_trim:
     input:
-        trimmed1 = rules.trim_reads.output.trimmed1,
-        trimmed2 = rules.trim_reads.output.trimmed2
+        trimmed1 = lambda wildcards: config["samples_dir"] + "/{sample_dir}/" + SAMPLES_DICT[wildcards.sample_dir] + "_val_1.fq",
+        trimmed2 = lambda wildcards: config["samples_dir"] + "/{sample_dir}/" + SAMPLES_DICT[wildcards.sample_dir] + "_val_2.fq"
     output:
-        prin_trim1 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_1.fastq",
-        prin_trim2 = config["samples_dir"] + "/{sample_dir}/{sample}_prinseq_2.fastq"
+        prin_trim1 = config["samples_dir"] + "/{sample_dir}/{sample_dir}_prinseq_1.fastq",
+        prin_trim2 = config["samples_dir"] + "/{sample_dir}/{sample_dir}_prinseq_2.fastq"
     params:
         threads = config["threads"],
         out_path = config["samples_dir"] + "/{sample_dir}/"
     log:
-        "logs/prinseq/{sample_dir}/{sample}.log"
+        "logs/prinseq/{sample_dir}.log"
     shell:
         r"""
         prinseq++ \
@@ -72,10 +72,10 @@ rule prinseq_trim:
         -threads {params.threads} \
         -out_good {output.prin_trim1} \
         -out_good2 {output.prin_trim2} \
-        -out_bad {params.out_path}{wildcards.sample}_bad_1.fastq \
-        -out_bad2 {params.out_path}{wildcards.sample}_bad_2.fastq \
-        -out_single {params.out_path}{wildcards.sample}_single_1.fastq \
-        -out_single2 {params.out_path}{wildcards.sample}_single_2.fastq \
+        -out_bad {params.out_path}{wildcards.sample_dir}_bad_1.fastq \
+        -out_bad2 {params.out_path}{wildcards.sample_dir}_bad_2.fastq \
+        -out_single {params.out_path}{wildcards.sample_dir}_single_1.fastq \
+        -out_single2 {params.out_path}{wildcards.sample_dir}_single_2.fastq \
         -min_len 50 \
         2>{log}
         """
@@ -86,12 +86,12 @@ rule align_reads:
         prin_trim1 = rules.prinseq_trim.output.prin_trim1,
         prin_trim2 = rules.prinseq_trim.output.prin_trim2
     output:
-        bam = config["samples_dir"] + "/{sample_dir}/{sample}.bam"
+        bam = config["samples_dir"] + "/{sample_dir}/{sample_dir}.bam"
     params:
         ref = config["ref_genome"],
         threads = config["threads"]
     log:
-        "logs/bwamem/{sample_dir}/{sample}.log"
+        "logs/bwamem/{sample_dir}.log"
     shell:
         r"""
         bwa mem \
@@ -113,9 +113,9 @@ rule bam_index:
     input:
         bam = rules.align_reads.output.bam
     output:
-        index = config["samples_dir"] + "/{sample_dir}/{sample}.bam.bai"
+        index = config["samples_dir"] + "/{sample_dir}/{sample_dir}.bam.bai"
     log:
-        "logs/samindex/{sample_dir}/{sample}.log"
+        "logs/samindex/{sample_dir}.log"
     shell:
         r"""
         samtools index \
@@ -130,12 +130,12 @@ rule ivar_trim:
         bam = rules.align_reads.output.bam,
         index = rules.bam_index.output.index
     output:
-        ivar_trimmed = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2.bam"
+        ivar_trimmed = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2.bam"
     params:
-        out_path = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2",
+        out_path = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2",
         primer = config["primer_bed"]
     log:
-        "logs/ivartrim/{sample_dir}/{sample}.log"
+        "logs/ivartrim/{sample_dir}.log"
     shell:
         r"""
         ivar trim \
@@ -152,11 +152,11 @@ rule sort_ivar_trimmed:
     input:
         ivar_trimmed = rules.ivar_trim.output.ivar_trimmed
     output:
-        ivar_trim_sorted = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_sorted.bam"
+        ivar_trim_sorted = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_sorted.bam"
     params:
         threads = config["threads"]
     log:
-        "logs/samsortIvar/{sample_dir}/{sample}.log"
+        "logs/samsortIvar/{sample_dir}.log"
     shell:
         r"""
         samtools sort \
@@ -171,9 +171,9 @@ rule index_ivar_trimmed:
     input:
         bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted
     output:
-        index = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2.bam.bai"
+        index = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2.bam.bai"
     log:
-        "logs/samindexIvar/{sample_dir}/{sample}.log"
+        "logs/samindexIvar/{sample_dir}.log"
     shell:
         r"""
         samtools index \
@@ -188,11 +188,11 @@ rule generate_consensus:
         ivar_bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted,
         ivar_bam_index = rules.index_ivar_trimmed.output.index
     output:
-        consensus = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus.fa"
+        consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus.fa"
     params:
-        out_path = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus"
+        out_path = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus"
     log:
-        "logs/ivarConsensus/{sample_dir}/{sample}.log"
+        "logs/ivarConsensus/{sample_dir}.log"
     shell:
         r"""
         samtools mpileup \

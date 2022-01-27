@@ -1,7 +1,7 @@
 
 rule get_summary_stats:
     input:
-        all_stats = expand(config["samples_dir"] + "/{sample_dir}/{sample}.stat", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        all_stats = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}.stat", sample_dir=SAMPLE_DIRS)
     output:
         sum_stats = temp(config["summary_dir"] + "/Stats_temp.csv")
     log:
@@ -18,7 +18,7 @@ rule get_summary_stats:
 
         for sample_stat in ${{sorted_samples[@]}}
         do
-        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
+        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d . -f 1)
         echo -n "$sample,";
 
         cat $sample_stat |awk '{{for(i=1;i<=NF;i++) printf "%s, ",$i; print ""; }}'
@@ -30,7 +30,7 @@ rule get_summary_stats:
 
 rule get_summary_amplicon_coverage:
     input:
-        all_amp_cov = expand(config["samples_dir"] + "/{sample_dir}/{sample}.amplicon.cov", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        all_amp_cov = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}.amplicon.cov", sample_dir=SAMPLE_DIRS)
     output:
         sum_amp_cov = config["summary_dir"] + "/ampliconDepth.csv"
     log:
@@ -44,9 +44,9 @@ rule get_summary_amplicon_coverage:
         unset IFS
 
         samples=()
-        for sample_stat in ${{sorted_samples[@]}}
+        for sample_cov in ${{sorted_samples[@]}}
         do
-        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
+        sample=$(echo $sample_cov | rev | cut -d / -f 1 | rev | cut -d . -f 1)
         samples+=( $sample )
         done 2>{log}
 
@@ -58,11 +58,11 @@ rule get_summary_amplicon_coverage:
 
 rule collect_plots:
     input:
-        amp_dep_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample}-Amplicon-Depth.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
-        cov_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample}-coverage.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        amp_dep_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}-Amplicon-Depth.pdf", sample_dir=SAMPLE_DIRS),
+        cov_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}-coverage.pdf", sample_dir=SAMPLE_DIRS)
     output:
-        collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample}-Amplicon-Depth.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
-        collected_cov = expand(config["summary_dir"] + "/CoveragePlots/{sample}-coverage.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample_dir}-Amplicon-Depth.pdf", sample_dir=SAMPLE_DIRS),
+        collected_cov = expand(config["summary_dir"] + "/CoveragePlots/{sample_dir}-coverage.pdf", sample_dir=SAMPLE_DIRS)
     params:
         plot_directory = config["summary_dir"] + "/CoveragePlots/"
     log:
@@ -105,7 +105,7 @@ rule get_ambiguous_nucleotide_positions_and_N_counts:
 rule get_ambiguous_position_depth:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs,
-        all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample}_Depth_trimx2.tsv", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_Depth_trimx2.tsv", sample_dir=SAMPLE_DIRS)
     output:
         ambig_pos = temp(config["summary_dir"] + "/ambig_pos"),
         ambig_pos_dep = temp(config["summary_dir"] + "/ambig_pos_depth.csv")
@@ -190,41 +190,6 @@ rule add_N_and_ambig_counts_to_stats:
         stats_N_ambig_count.fillna(0, downcast='infer', inplace=True)
 
         stats_N_ambig_count.to_csv(output.stats, index=False)
-
-
-
-#Not sure this is necessary as info is aslready in Stats.csv
-rule get_reference_coverage:
-    input:
-        all_bams = expand(config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_sorted.bam", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
-        all_depth = expand(config["samples_dir"] + "/{sample_dir}/{sample}_Depth_trimx2.tsv", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
-    output:
-        ref_cov = config["summary_dir"] + "/ref_cov.csv"
-    log:
-        "logs/getRefCov.log"
-    shell:
-        r"""
-        echo -e 'Sequence ID,Ref Length,Ref Coverage,Ref Coverage %' > {output.ref_cov}
-
-        bam_array=({input.all_bams})
-
-        IFS=$'\n'
-        sorted_samples=($(sort <<<"${{bam_array[*]}}"))
-        unset IFS
-
-        for sample_bam in ${{sorted_samples[@]}}
-        do
-
-            sample_dir=$(dirname $sample_bam)
-            sample=$(echo $sample_dir | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
-            refLength=$(samtools idxstats $sample_bam | awk 'NR==1{{print $(NF-2);}}')
-            refCoverage=$(awk '$NF< 10{{i++}};END{{print NR-i;}}' $sample_dir/Depth_trimx2.tsv)
-            covPerc=$(echo $refCoverage $refLength | awk '{{printf "%0.2f", $1 / $2 * 100}}')
-
-            echo $sample $refLength $refCoverage $covPerc | awk '{{OFS=","}} {{print $1,$2,$3+0,$4}}' >> {output.ref_cov}
-
-        done 2>{log}
-        """
 
 
 rule get_masked_ambiguous_nucleotide_positions_and_N_counts:

@@ -1,7 +1,7 @@
 
 rule aggregate_consensus:
     input:
-        consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus.fa",zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus.fa", sample_dir=SAMPLE_DIRS)
     output:
         aggregated_consensus = config["summary_dir"] + "/All-consensus.fa"
     log:
@@ -45,14 +45,14 @@ rule align_consensus:
 
 rule align_individual_consensus:
     input:
-        sample_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_ivar_consensus.fa"
+        sample_consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus.fa"
     output:
-        consensus_with_ref = temp(config["samples_dir"] + "/{sample_dir}/{sample}_consensus_with_ref.fa"),
-        aligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_consensus_aligned.fa"
+        consensus_with_ref = temp(config["samples_dir"] + "/{sample_dir}/{sample_dir}_consensus_with_ref.fa"),
+        aligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_consensus_aligned.fa"
     params:
         ref = config["ref_genome"]
     log:
-        "logs/alignIndConsensus/{sample_dir}/{sample}.log"
+        "logs/alignIndConsensus/{sample_dir}.log"
     shell:
         r"""
         cp {input.sample_consensus} {output.consensus_with_ref} 2>{log}
@@ -67,12 +67,12 @@ rule mask_ambiguous_nucleotides:
     input:
         aligned_ind_consensus = rules.align_individual_consensus.output.aligned_consensus
     output:
-        masked_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_masked_consensus_aligned.fa"
+        masked_consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_masked_consensus_aligned.fa"
     params:
         script = config["scripts"] + "/maskAmbNucs.py",
         mask_regions = config["ambig_regions"]
     log:
-        "logs/maskAmbigNucs/{sample_dir}/{sample}.log"
+        "logs/maskAmbigNucs/{sample_dir}.log"
     shell:
         r"""
         python {params.script} \
@@ -87,12 +87,12 @@ rule unalign_masked_consensus:
     input:
         masked_consensus = rules.mask_ambiguous_nucleotides.output.masked_consensus
     output:
-        unaligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample}_masked_consensus.fa"
+        unaligned_consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_masked_consensus.fa"
     params:
         script = config["scripts"] + "/removeRefAndGaps.py",
         ref_name = config["ref_genome"].split('/')[-1][:-3]
     log:
-       "logs/removeRefandGaps/{sample_dir}/{sample}.log"
+       "logs/removeRefandGaps/{sample_dir}.log"
     shell:
         r"""
         python {params.script} \
@@ -105,7 +105,7 @@ rule unalign_masked_consensus:
 
 rule aggregate_masked_consensus:
     input:
-        masked_consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample}_masked_consensus.fa", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        masked_consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_masked_consensus.fa", sample_dir=SAMPLE_DIRS)
     output:
         aggregated_masked_consensus = config["summary_dir"] + "/All-masked-consensus.fa"
     log:
@@ -149,8 +149,8 @@ rule align_masked_consensus:
 
 rule make_climb_dir:
     input:
-        sample_bams = expand(config["samples_dir"] + "/{sample_dir}/{sample}_trimx2_sorted.bam", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
-        masked_consensus = expand(config["samples_dir"] + "/{sample_dir}/{sample}_masked_consensus.fa", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES)
+        sample_bams = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_sorted.bam", sample_dir=SAMPLE_DIRS),
+        masked_consensus = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_masked_consensus.fa", sample_dir=SAMPLE_DIRS)
     output:
         climb_bam = expand(config["batch_dir"] + "/ClimbSeq/{sample}/{sample}.bam", sample=SAMPLE_DIRS),
         climb_fasta = expand(config["batch_dir"] + "/ClimbSeq/{sample}/{sample}.fa", sample=SAMPLE_DIRS)

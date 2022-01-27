@@ -27,8 +27,16 @@ for row in sample_sheet.readlines():
 sample_sheet.close()
 
 
+#Testing set
+#SAMPLES = SAMPLES[30:46]
+
+
 #Shortened sample name
 SAMPLE_DIRS = [id.split('_')[0] for id in SAMPLES]
+
+
+#Dictionary of shortened sample name to full sample name
+SAMPLES_DICT = {sample.split('_')[0]:sample for sample in SAMPLES}
 
 
 ##### Request Outputs #####
@@ -37,9 +45,8 @@ rule all:
 #Summary outputs
         sum_stats = config["summary_dir"] + "/Stats.csv",
         sum_amp_cov = config["summary_dir"] + "/ampliconDepth.csv",
-        collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample}-Amplicon-Depth.pdf", zip, sample_dir=SAMPLE_DIRS, sample=SAMPLES),
+        collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample_dir}-Amplicon-Depth.pdf", sample_dir=SAMPLE_DIRS),
         ambig_pos_and_dep = config["summary_dir"] + "/ambig_nuc_pos_and_dep.csv",
-        ambig_pos_count = config["summary_dir"] + "/ambig_pos_count.csv",
         masked_ambig_nucs = config["summary_dir"] + "/masked_ambig_nuc_pos.csv",
         pangolin_report =  config["summary_dir"] + "/lineage_report.csv",
 #Climb Dir
