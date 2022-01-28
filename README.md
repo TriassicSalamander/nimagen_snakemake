@@ -16,5 +16,14 @@ Mamba can be installed by:
 conda install mamba -n base -c conda-forge
 ```
 
+## Using autoNimagen
+autoNimagen.sh is a wrapper which automatically executes the snakemake pipeline once the sequencing run is complete.
+This is useful when you know the output path of a given sequencing run, but don't know exactly when the run will finish.
+Usage:
+```
+bash autoNimagen.sh -i <path/to/run/directory> -c <number of cores>
+```
+
+
 ## Rulegraph
 ![Alt text](documentation/rulegraph.svg "Rulegraph")
