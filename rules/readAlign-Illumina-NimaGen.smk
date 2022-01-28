@@ -29,8 +29,8 @@ rule trim_reads:
         fq1 = lambda wildcards: config["fastq_directory"] + "/" + SAMPLES_DICT[wildcards.sample_dir] + "_R1_001.fastq.gz",
         fq2 = lambda wildcards: config["fastq_directory"] + "/" + SAMPLES_DICT[wildcards.sample_dir] + "_R2_001.fastq.gz"
     output:
-        trimmed1 = config["samples_dir"] + "/{sample_dir}/{sample}_val_1.fq",
-        trimmed2 = config["samples_dir"] + "/{sample_dir}/{sample}_val_2.fq"
+        trimmed1 = temp(config["samples_dir"] + "/{sample_dir}/{sample}_val_1.fq"),
+        trimmed2 = temp(config["samples_dir"] + "/{sample_dir}/{sample}_val_2.fq")
     params:
         path_prefix = config["samples_dir"]
     log:
