@@ -16,3 +16,5 @@ Mamba can be installed by:
 conda install mamba -n base -c conda-forge
 ```
 
+## Rulegraph
+![Alt text](nimagen_snakemake/documentation/rulegraph.svg "Rulegraph")
