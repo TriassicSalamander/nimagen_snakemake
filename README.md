@@ -17,4 +17,4 @@ conda install mamba -n base -c conda-forge
 ```
 
 ## Rulegraph
-![Alt text](nimagen_snakemake/documentation/rulegraph.svg "Rulegraph")
+![Alt text](documentation/rulegraph.svg "Rulegraph")
