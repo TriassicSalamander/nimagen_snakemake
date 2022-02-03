@@ -1,4 +1,5 @@
 
+#May need to use the --force flag.
 rule demultiplex_samples:
     input:
         run_dir = config["run_directory"]
@@ -20,10 +21,15 @@ rule demultiplex_samples:
         --bcl-num-conversion-threads {params.bcl_threads} \
         2>{log}
 
-        chmod -R 774 {params.fastq_dir} 2>>{log}
+        chmod -R 774 {params.fastq_dir} 2>>{log}   #To prevent overwrite by users without group permissions.
         """
 
 
+#Input determined by lambda function, where sample_dir wildcard from output is used as a key for the 
+#SAMPLES_DICT dictionary defined in the Snakefile.
+#Trimmed output are marked as temporary and are removed once the pipeline is finished executing.
+#This saves on space.
+#--nextseq parameter used to account for 2-colour chemistry
 rule trim_reads:
     input:
         fq1 = lambda wildcards: config["fastq_directory"] + "/" + SAMPLES_DICT[wildcards.sample_dir] + "_R1_001.fastq.gz",
@@ -32,25 +38,23 @@ rule trim_reads:
         trimmed1 = temp(config["samples_dir"] + "/{sample_dir}/{sample}_val_1.fq"),
         trimmed2 = temp(config["samples_dir"] + "/{sample_dir}/{sample}_val_2.fq")
     params:
-        path_prefix = config["samples_dir"]
+        out_dir = config["samples_dir"] + "/{sample_dir}"
     log:
         "logs/trimGalore/{sample_dir}/{sample}.log"
     shell:
         r"""
-        sample_dir=$(echo {wildcards.sample} | cut -d _ -f 1)
-        out_path={params.path_prefix}/$sample_dir
-
         trim_galore \
         --nextseq 30 \
         --dont_gzip \
         --length 50 \
-        -o $out_path \
+        -o {params.out_dir} \
         --basename {wildcards.sample} \
         --paired {input.fq1} {input.fq2} \
         > /dev/null  2>{log}
         """
 
 
+#prinseq is used to remove low quality bases from 3' end.
 rule prinseq_trim:
     input:
         trimmed1 = lambda wildcards: config["samples_dir"] + "/{sample_dir}/" + SAMPLES_DICT[wildcards.sample_dir] + "_val_1.fq",
@@ -81,6 +85,7 @@ rule prinseq_trim:
         """
 
 
+#Reads are algined to reference and sorted.
 rule align_reads:
     input:
         prin_trim1 = rules.prinseq_trim.output.prin_trim1,
@@ -125,6 +130,8 @@ rule bam_index:
         """
 
 
+#ivar used to trim primers
+#-x parameter is used to define the offset of a read relative to the primer.
 rule ivar_trim:
     input:
         bam = rules.align_reads.output.bam,
@@ -183,6 +190,7 @@ rule index_ivar_trimmed:
         """
 
 
+#Consensus fasta is created from ivar trimmed reads.
 rule generate_consensus:
     input:
         ivar_bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted,

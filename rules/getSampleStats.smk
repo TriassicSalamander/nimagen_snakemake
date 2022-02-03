@@ -17,6 +17,8 @@ rule get_depth:
         """
 
 
+#Calls script which determines the depth of each amplicon.
+#Output is a tsv file with columns representing: amplicon number, start position, end position and depth.
 rule get_amplicon_depth:
     input:
         bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted
@@ -37,6 +39,8 @@ rule get_amplicon_depth:
         """
 
 
+#Calls script which determines a number of statistics.
+#Output is a space-delimited file with columns representing: Total reads,Mapped reads,Mapped reads(>30nt), Mapped read %,Ref name,Ref Length,Ref Coverage,Ref coverage %,Average Depth,Min Depth,Max Depth
 rule get_stats:
     input:
         trimmed1 = lambda wildcards: config["samples_dir"] + "/{sample_dir}/" + SAMPLES_DICT[wildcards.sample_dir] + "_val_1.fq",

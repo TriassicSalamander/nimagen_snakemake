@@ -1,4 +1,5 @@
 
+#Rule which collects the consensus sequences from all of the sample folders into a single fasta file.
 rule aggregate_consensus:
     input:
         consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus.fa", sample_dir=SAMPLE_DIRS)
@@ -8,21 +9,22 @@ rule aggregate_consensus:
         "logs/aggregateConsensus.log"
     shell:
         r"""
-        sample_array=({input.consensus_files})
+        sample_array=({input.consensus_files})   #Create array of all the sample consensus fastas
 
         IFS=$'\n'
-        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))   #These three lines are for sorting the array.
         unset IFS
 
-        for sample_consensus in ${{sorted_samples[@]}}
+        for sample_consensus in ${{sorted_samples[@]}}   #Loop through the sorted array
         do
-        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f1)
-        awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus
+        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f1)   #Get sample name from the file path. This will be used as the fasta header.
+        awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus   #If a line begins with '>', print the new header. Otherwise print the sequence.
         done >{output.aggregated_consensus} \
         2>{log}
         """
 
 
+#Rule which adds the reference to the collected fastas and then aligns them using mafft.
 rule align_consensus:
     input:
         aggregated_consensus = rules.aggregate_consensus.output.aggregated_consensus
@@ -43,6 +45,7 @@ rule align_consensus:
         """
 
 
+#Rule which adds the reference to the consensus fasta in each sample folder and then aligns each one using mafft.
 rule align_individual_consensus:
     input:
         sample_consensus = config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_ivar_consensus.fa"
@@ -63,6 +66,9 @@ rule align_individual_consensus:
         """
 
 
+#Rule which calls a script to mask regions with 'N's.
+#This may be done if a given region, such as an amplicon, is known to contain a high number of ambiguous nucleotides.
+#Regions are defined in a tsv file where start and end are columns 2 and 3, respectively.
 rule mask_ambiguous_nucleotides:
     input:
         aligned_ind_consensus = rules.align_individual_consensus.output.aligned_consensus
@@ -83,6 +89,8 @@ rule mask_ambiguous_nucleotides:
         """
 
 
+#Rule which calls a script to unalign the individual consensus sequences after the ambiguous regions have been masked.
+#Unalign in this case means removing the reference sequence and gaps from the fasta.
 rule unalign_masked_consensus:
     input:
         masked_consensus = rules.mask_ambiguous_nucleotides.output.masked_consensus
@@ -103,6 +111,8 @@ rule unalign_masked_consensus:
         """
 
 
+#Rule which collects the masked consensus sequences from all of the sample folders into a single fasta file.
+#Identical to the aggregate_consensus rule, except for the input.
 rule aggregate_masked_consensus:
     input:
         masked_consensus_files = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_masked_consensus.fa", sample_dir=SAMPLE_DIRS)
@@ -127,6 +137,8 @@ rule aggregate_masked_consensus:
         """
 
 
+#Rule which adds the reference to the collected masked fastas and then aligns them using mafft.
+#Identical to the align_consensus rule, except for the input.
 rule align_masked_consensus:
     input:
         aggregated_masked_consensus = rules.aggregate_masked_consensus.output.aggregated_masked_consensus
@@ -147,6 +159,7 @@ rule align_masked_consensus:
         """
 
 
+#Rule for making the directory that will be uploaded to the climb server.
 rule make_climb_dir:
     input:
         sample_bams = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_trimx2_sorted.bam", sample_dir=SAMPLE_DIRS),
@@ -161,13 +174,13 @@ rule make_climb_dir:
         "logs/makeClimbDir.log"
     shell:
         r"""
-        bam_array=({input.sample_bams})
+        bam_array=({input.sample_bams})   #Create array of all the sample bam files.
 
-        for sample_bam in ${{bam_array[@]}}
+        for sample_bam in ${{bam_array[@]}}   #Loop through array of bam files.
         do
 
-        newName=$(echo $sample_bam | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
-        cp $sample_bam {params.climb_dir}/$newName/$newName.bam
+        newName=$(echo $sample_bam | rev | cut -d / -f 1 | rev | cut -d _ -f 1)   #Get sample name from the file path. This will be used as the new filename and fasta header.
+        cp $sample_bam {params.climb_dir}/$newName/$newName.bam   #Copy the sample bam file to the climb directory.
         awk -v newName="$newName" '{{if($1~/>/){{print ">"newName;}} else print}}' {params.sample_path}/$newName/$newName*_masked_consensus.fa > {params.climb_dir}/$newName/$newName.fa
 
         done 2>{log}
