@@ -1,4 +1,5 @@
 
+#Rule which collects the stat files for each sample.
 rule get_summary_stats:
     input:
         all_stats = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}.stat", sample_dir=SAMPLE_DIRS)
@@ -8,26 +9,28 @@ rule get_summary_stats:
         "logs/sumStats.log"
     shell:
         r"""
+        #Create column headers.
         echo "Sample,Total reads,Mapped reads,Mapped reads(>30nt), Mapped read %,Ref name,Ref Length,Ref Coverage,Ref coverage %,Average Depth,Min Depth,Max Depth" > {output.sum_stats};
 
-        sample_array=({input.all_stats})
+        sample_array=({input.all_stats})   #Create array of all the stats files
 
         IFS=$'\n'
-        sorted_samples=($(sort <<<"${{sample_array[*]}}"))
+        sorted_samples=($(sort <<<"${{sample_array[*]}}"))   #These three lines are for sorting the array.
         unset IFS
 
-        for sample_stat in ${{sorted_samples[@]}}
+        for sample_stat in ${{sorted_samples[@]}}   #Loop through the sorted array
         do
-        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d . -f 1)
+        sample=$(echo $sample_stat | rev | cut -d / -f 1 | rev | cut -d . -f 1)   #Get sample name from the file path. This will be used for the 'Sample' column.
         echo -n "$sample,";
 
-        cat $sample_stat |awk '{{for(i=1;i<=NF;i++) printf "%s, ",$i; print ""; }}'
+        cat $sample_stat |awk '{{for(i=1;i<=NF;i++) printf "%s, ",$i; print ""; }}'   #Print the stat file to output as csv.
 
         done >> {output.sum_stats} \
         2>{log}
         """
 
 
+#Rule which collects the amplicon depth files for each sample.
 rule get_summary_amplicon_coverage:
     input:
         all_amp_cov = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}.amplicon.cov", sample_dir=SAMPLE_DIRS)
@@ -43,19 +46,20 @@ rule get_summary_amplicon_coverage:
         sorted_samples=($(sort <<<"${{sample_array[*]}}"))
         unset IFS
 
-        samples=()
+        samples=()   #Create empty array which will be populated with sample names.
         for sample_cov in ${{sorted_samples[@]}}
         do
         sample=$(echo $sample_cov | rev | cut -d / -f 1 | rev | cut -d . -f 1)
         samples+=( $sample )
         done 2>{log}
 
-        echo ${{samples[*]}} | sed 's/ /,/g' > {output.sum_amp_cov} 2>{log}
+        echo ${{samples[*]}} | sed 's/ /,/g' > {output.sum_amp_cov} 2>{log}   #Print sample names as csv to output. These will be the headers.
 
-        paste {input.all_amp_cov} | awk '{{for(i=4;i<=NF;i+=4) printf "%s,",$i; print "";}}' >> {output.sum_amp_cov} 2>{log}
+        paste ${{sorted_samples[@]}} | awk '{{for(i=4;i<=NF;i+=4) printf "%s,",$i; print "";}}' >> {output.sum_amp_cov} 2>{log}   #From all the amplicon depth files, take the depth column and print to output.
         """
 
 
+#Rule for copying all of the sample pdfs to the CoveragePlots directory.
 rule collect_plots:
     input:
         amp_dep_plots = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}-Amplicon-Depth.pdf", sample_dir=SAMPLE_DIRS),
@@ -80,6 +84,8 @@ rule collect_plots:
         """
 
 
+#Rule which calls a script to determine ambiguous base and position for samples.
+#The script also outputs the number of 'N's in each sample consensus.
 rule get_ambiguous_nucleotide_positions_and_N_counts:
     input:
         aligned_consensus = config["summary_dir"] + "/All-consensus_aligned.fa"
@@ -102,6 +108,7 @@ rule get_ambiguous_nucleotide_positions_and_N_counts:
         """
 
 
+#Rule which determines the depth and position for ambiguous nucleotides.
 rule get_ambiguous_position_depth:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs,
@@ -115,22 +122,25 @@ rule get_ambiguous_position_depth:
         "logs/getAmbPosDep.log"
     shell:
         r"""
+        #Print columnn headers to output.
         echo -e 'Sequence ID,Position,Depth' > {output.ambig_pos_dep}
 
-        awk 'BEGIN {{FS=","}} {{OFS=","}} {{print $1,$3}}' {input.ambig_nucs} > {output.ambig_pos}
+        awk 'BEGIN {{FS=","}} {{OFS=","}} {{print $1,$3}}' {input.ambig_nucs} > {output.ambig_pos}   #Print sample name and position columns to temp output.
 
-        while read sample
+        while read sample   #Loop through sample names.
         do
 
-            while read position
+            while read position   #Loop through ambiguous positions.
             do
-                awk -v sample="$sample" -v pos="$position" '{{OFS=","}} $2 == pos {{print sample,pos,$3}}' {params.sample_path_prefix}/$sample/$sample*_Depth_trimx2.tsv >> {output.ambig_pos_dep}
+                awk -v sample="$sample" -v pos="$position" '{{OFS=","}} $2 == pos {{print sample,pos,$3}}' {params.sample_path_prefix}/$sample/$sample*_Depth_trimx2.tsv >> {output.ambig_pos_dep}   #Get depth at position for given sample and print to output.
             done < <(awk -v sample="$sample" '{{FS=","}} $1 == sample {{print $2}}' {output.ambig_pos})   #use list of ambiguous positions for given sample as input for loop
 
         done < <(awk '{{FS=","}}(NR>1) {{print $1}}' {input.ambig_nucs} | uniq) 2>{log}   #use unique list of samples as input for loop
         """
 
 
+#Rule which combines outputs from get_ambiguous_nucleotide_positions_and_N_counts and get_ambiguous_position_depth
+#to give a csv file with columns: Sequence ID, Position, Ambiguous Base and Depth
 rule combine_ambig_nuc_pos_and_depth:
     input:
         ambig_pos = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs,
@@ -148,6 +158,7 @@ rule combine_ambig_nuc_pos_and_depth:
         combined_df.to_csv(output.ambig_pos_and_dep, index=False)
 
 
+#Rule which calls script which counts the number of ambiguos nucleotides per sample.
 rule get_ambiguous_position_counts:
     input:
         ambig_nucs = rules.get_ambiguous_nucleotide_positions_and_N_counts.output.ambig_nucs
@@ -166,6 +177,7 @@ rule get_ambiguous_position_counts:
         """
 
 
+#Rule which adds ambiguous nucleotide count and N counts to the summary stats file.
 rule add_N_and_ambig_counts_to_stats:
     input:
         stats = rules.get_summary_stats.output.sum_stats,
@@ -179,7 +191,7 @@ rule add_N_and_ambig_counts_to_stats:
         stats_df = pd.read_csv(input.stats, index_col=False)
 
         N_count_df = pd.read_csv(input.N_counts, index_col=False)
-        N_count_df.rename(columns={'Sequence ID':'Sample', 'N Count':'Consensus N Count'}, inplace=True)
+        N_count_df.rename(columns={'Sequence ID':'Sample', 'N Count':'Consensus N Count'}, inplace=True)   #Rename columns to match summary stats file.
 
         ambig_count_df = pd.read_csv(input.ambig_counts, index_col=False)
         ambig_count_df.rename(columns={'Sequence ID':'Sample', 'Amb Count':'Ambiguous Nucleotide Count'}, inplace=True)
@@ -187,11 +199,12 @@ rule add_N_and_ambig_counts_to_stats:
         stats_N_count = pd.merge(stats_df, N_count_df, how='left', on='Sample')
         stats_N_ambig_count = pd.merge(stats_N_count, ambig_count_df, how='left', on='Sample')
 
-        stats_N_ambig_count.fillna(0, downcast='infer', inplace=True)
+        stats_N_ambig_count.fillna(0, downcast='infer', inplace=True)   #Samples without 'N's or ambiguous nucleotides will have n/a values, so these need to be replaced with '0's.
 
         stats_N_ambig_count.to_csv(output.stats, index=False)
 
 
+#Rule which calls a script to determine ambiguous base and position for masked sample consensus sequences.
 rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
     input:
         aligned_masked_consensus = config["summary_dir"] + "/All-masked-consensus_aligned.fa"
@@ -214,6 +227,7 @@ rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
         """
 
 
+#Rule which creates a pangolin lineage report for the masked consensus files.
 rule assign_lineages:
     input:
         masked_consensus =  config["summary_dir"] + "/All-masked-consensus.fa"
