@@ -17,7 +17,7 @@ rule aggregate_consensus:
 
         for sample_consensus in ${{sorted_samples[@]}}   #Loop through the sorted array
         do
-        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f1)   #Get sample name from the file path. This will be used as the fasta header.
+        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f 1)   #Get sample name from the file path. This will be used as the fasta header.
         awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus   #If a line begins with '>', print the new header. Otherwise print the sequence.
         done >{output.aggregated_consensus} \
         2>{log}
