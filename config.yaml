@@ -1,24 +1,24 @@
 ##### Input Paths #####
-#Sample sheet would normally be runDir/SampleSheet.csv by default
-sample_sheet: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Runs/211217_NB551552_0119_AHG5WWAFX3/SampleSheet_run119.csv
-run_directory: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Runs/211217_NB551552_0119_AHG5WWAFX3
-fastq_directory: /alpha_trans/alpha_home1/illumina/NextSeq2_backup/Fastq/211217_NB551552_0119_AHG5WWAFX3
+#Sample sheet would normally be found inside the run directory, e.g runDir/SampleSheet.csv by default
+sample_sheet: /path/to/sample/sheet
+run_directory: /path/to/run/directory
+fastq_directory: /path/to/fastq/directory
 
 ##### Output Paths ######
 output_path: output
-batch_dir: output/batch190rep2
-samples_dir: output/batch190rep2/Samples
-summary_dir: output/batch190rep2/Summary
+batch_dir: output/batchName
+samples_dir: output/batchName/Samples
+summary_dir: output/batchName/Summary
 
 ##### Other Parameters #####
-threads: 5
+threads: 7
 bcl-convert_threads: 26
 
 ##### Resources #####
 ref_genome: resources/ref/MN908947.3.fa
-primer_bed: resources/primers/nCoV-2019-NimaGen-V3.bed
-PE_primer_bed: resources/primers/nCoV-2019-NimaGen-PE-V3.bed
-ambig_regions: resources/ambig_regions
+primer_bed: resources/primers/primer_V??.bed
+PE_primer_bed: resources/primers/primer_PE_V??.bed
+ambig_regions: resources/mask/blank_mask
 
 ##### Utilities
 scripts: utilities/scripts
