@@ -8,3 +8,5 @@ dependencies:
   - snakemake
   - biopython
   - prinseq-plus-plus
+  - freyja
+  - samtools<=1.14
