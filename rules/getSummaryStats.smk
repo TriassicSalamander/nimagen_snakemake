@@ -246,3 +246,72 @@ rule assign_lineages:
         -o {params.out_dir} \
         2>{log}
         """
+
+
+rule collect_freyja_demixed:
+    input:
+        all_demixed = expand(config["samples_dir"] + "/{sample_dir}/{sample_dir}_freyja_demixed.tsv", sample_dir=SAMPLE_DIRS)
+    output:
+        collected_demixed = expand(config["summary_dir"] + "/FreyjaDemixed/{sample_dir}_freyja_demixed.tsv", sample_dir=SAMPLE_DIRS)
+    params:
+        demixed_dir = config["summary_dir"] + "/FreyjaDemixed/"
+    log:
+        "logs/collectFreyjaDemixed.log"
+    shell:
+        r"""
+        demixed_array=({input.all_demixed})
+
+        for demixed in ${{demixed_array[@]}}
+        do
+        cp $demixed {params.demixed_dir}
+        done 2>{log}
+        """
+
+
+rule aggregate_freyja_demixed:
+    input:
+        collected_demixed = rules.collect_freyja_demixed.output.collected_demixed
+    output:
+        aggregated_demmixed = config["summary_dir"] + "/All-freyja-demixed.tsv"
+    params:
+        demixed_dir = config["summary_dir"] + "/FreyjaDemixed/"
+    log:
+        "logs/aggregateFreyja.log"
+    shell:
+        r"""
+        freyja aggregate \
+        {params.demixed_dir} \
+        --output {output.aggregated_demmixed} \
+        2>{log}
+        """
+
+
+rule plot_aggregate_freyja:
+    input:
+        aggregated_demixed = rules.aggregate_freyja_demixed.output.aggregated_demmixed
+    output:
+        temp_aggregated = config["summary_dir"] + "/All-freyja-demixed_temp.tsv",
+        freyja_summarised_plot = config["summary_dir"] + "/All-freyja-summarised-plot.pdf",
+        freyja_lineage_plot = config["summary_dir"] + "/All-freyja-lineage-plot.pdf"
+    log:
+        "logs/freyjaPlot.log"
+    run:
+        import pandas as pd
+
+        #First filter input to only retain non-blank demixed samples.
+        demixed_df = pd.read_csv(input.aggregated_demixed, sep="\t", index_col=0)
+        demixed_df.dropna(inplace=True)
+        demixed_df.to_csv(output.temp_aggregated, sep='\t')
+
+        shell(r"""
+            freyja plot \
+            {output.temp_aggregated} \
+            --output {output.freyja_summarised_plot} \
+            2>{log}
+
+            freyja plot \
+            {output.temp_aggregated} \
+            --lineages \
+            --output {output.freyja_lineage_plot} \
+            2>{log}
+        """)

@@ -5,7 +5,7 @@ rule get_depth:
     output:
         depth = config["samples_dir"] + "/{sample_dir}/{sample_dir}_Depth_trimx2.tsv"
     log:
-        "logs/samdepth/{sample_dir}.log"
+        "logs/samDepth/{sample_dir}.log"
     shell:
         r"""
         samtools depth \
@@ -14,6 +14,55 @@ rule get_depth:
         -o {output.depth} \
         {input.bam} \
         2>{log}
+        """
+
+#Creates variant and depth files required for demixing samples with freyja.
+#Could maybe save time by using depth file already created by pipeline.
+rule get_freyja_variants_and_depth:
+    input:
+        bam = rules.sort_ivar_trimmed.output.ivar_trim_sorted
+    output:
+        variants = config["samples_dir"] + "/{sample_dir}/{sample_dir}_freyja_variants.tsv",
+        depth = config["samples_dir"] + "/{sample_dir}/{sample_dir}_freyja_depth.tsv"
+    params:
+        ref = config["ref_genome"]
+    log:
+        "logs/freyjaVariants/{sample_dir}.log"
+    shell:
+        r"""
+        freyja variants \
+        {input.bam} \
+        --variants {output.variants} \
+        --depths {output.depth} \
+        --ref {params.ref} \
+        2>{log}
+        """
+
+
+#Demixes samples to get lineage abundances.
+#Should be added as an option to config as only some runs will have mixed samples.
+rule get_freyja_demixed:
+    input:
+        variants = rules.get_freyja_variants_and_depth.output.variants,
+        depth = rules.get_freyja_variants_and_depth.output.depth
+    output:
+        demixed = config["samples_dir"] + "/{sample_dir}/{sample_dir}_freyja_demixed.tsv"
+    log:
+        "logs/freyjaDemix/{sample_dir}.log"
+    shell:
+        r"""
+        #Only demix if depth file isn't empty. Freyja throws an error otherwise.
+        #If it is empty, create a blank demixed output.
+        if [ -s {input.depth} ]
+        then
+            freyja demix \
+            {input.variants} \
+            {input.depth} \
+            --output {output.demixed} \
+            2>{log}
+        else
+            printf "\t{input.variants}\nsummarized\nlineages\nabundances\nresid" > {output.demixed}
+        fi
         """
 
 
