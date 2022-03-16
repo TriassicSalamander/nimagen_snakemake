@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #Script which expects a single file containing one or more fastas as input
 #Writes a CSV with headers: Sequence ID, Ambiguous Character and Position
+#Also writes a CSV with the number of Ns per sample
 #Developed by Simon Daldry at University of Glasgow
 
 from Bio import SeqIO
