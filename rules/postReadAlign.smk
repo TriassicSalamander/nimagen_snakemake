@@ -137,28 +137,6 @@ rule aggregate_masked_consensus:
         """
 
 
-#Rule which adds the reference to the collected masked fastas and then aligns them using mafft.
-#Identical to the align_consensus rule, except for the input.
-rule align_masked_consensus:
-    input:
-        aggregated_masked_consensus = rules.aggregate_masked_consensus.output.aggregated_masked_consensus
-    output:
-        masked_consensus_with_ref = temp(config["summary_dir"] + "/All-masked-consensus_with_ref.fa"),
-        aligned_masked_consensus = config["summary_dir"] + "/All-masked-consensus_aligned.fa"
-    params:
-        ref = config["ref_genome"]
-    log:
-        "logs/alignMaskedConsensus.log"
-    shell:
-        r"""
-        cp {input.aggregated_masked_consensus} {output.masked_consensus_with_ref} 2>{log}
-
-        cat {params.ref} >> {output.masked_consensus_with_ref} 2>{log}
-
-        mafft {output.masked_consensus_with_ref} > {output.aligned_masked_consensus} 2>{log}
-        """
-
-
 #Rule for making the directory that will be uploaded to the climb server.
 rule make_climb_dir:
     input:

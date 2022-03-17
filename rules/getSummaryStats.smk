@@ -204,29 +204,6 @@ rule add_N_and_ambig_counts_to_stats:
         stats_N_ambig_count.to_csv(output.stats, index=False)
 
 
-#Rule which calls a script to determine ambiguous base and position for masked sample consensus sequences.
-rule get_masked_ambiguous_nucleotide_positions_and_N_counts:
-    input:
-        aligned_masked_consensus = config["summary_dir"] + "/All-masked-consensus_aligned.fa"
-    output:
-        masked_ambig_nucs = config["summary_dir"] + "/masked_ambig_nuc_pos.csv",
-        masked_N_counts = config["summary_dir"] + "/masked_consensus_N_counts.csv"
-    params:
-        script = config["scripts"] + "/getAmbiguousPositions.py",
-        ref_name = config["ref_genome"].split('/')[-1][:-3]
-    log:
-        "logs/getMaskedAmbPosAndNCounts.log"
-    shell:
-        r"""
-        python {params.script} \
-        {input.aligned_masked_consensus} \
-        {params.ref_name} \
-        {output.masked_ambig_nucs} \
-        {output.masked_N_counts} \
-        2>{log}
-        """
-
-
 #Rule which creates a pangolin lineage report for the masked consensus files.
 rule assign_lineages:
     input:

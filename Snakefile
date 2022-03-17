@@ -29,7 +29,7 @@ sample_sheet.close()
 
 #Testing set
 #Uncomment below line to only run pipeline with 10 samples
-#SAMPLES = SAMPLES[30:40]
+SAMPLES = SAMPLES[30:40]
 
 
 #Shortened sample name
@@ -48,7 +48,6 @@ rule all:
         sum_amp_cov = config["summary_dir"] + "/ampliconDepth.csv",
         collected_amp_dep = expand(config["summary_dir"] + "/CoveragePlots/{sample_dir}-Amplicon-Depth.pdf", sample_dir=SAMPLE_DIRS),
         ambig_pos_and_dep = config["summary_dir"] + "/ambig_nuc_pos_and_dep.csv",
-        masked_ambig_nucs = config["summary_dir"] + "/masked_ambig_nuc_pos.csv",
         pangolin_report =  config["summary_dir"] + "/lineage_report.csv",
 #Climb Dir
         climb_bam = expand(config["batch_dir"] + "/ClimbSeq/{sample}/{sample}.bam", sample=SAMPLE_DIRS),
