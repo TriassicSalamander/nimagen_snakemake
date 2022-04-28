@@ -16,6 +16,10 @@ Mamba can be installed by:
 conda install mamba -n base -c conda-forge
 ```
 
+## Processing Waste Water Samples
+Currently, whether or not freyja is used in the pipeline is controlled by commenting/uncommenting the 'Freyja Outputs' in 'rule all' in the Snakefile. <br/>
+
+
 ## Using autoNimagen
 autoNimagen.sh is a wrapper which automatically executes the snakemake pipeline once the sequencing run is complete.
 This is useful when you know the output path of a given sequencing run, but don't know exactly when the run will finish.<br/>
