@@ -29,5 +29,20 @@ bash autoNimagen.sh -i <path/to/run/directory> -c <number of cores>
 ```
 
 
+## Pipeline Overview
+# Read Alignment
+The pipeline begins by demultiplexing the samples using bcl-convert, generating fastqs. <br/>
+These fastqs are then quality trimmed using TrimGalore. <br/>
+Prinseq is used to trim bases with quality <30 from the 3' end. <br/>
+The reads are aligned to a reference using bwa mem. <br/>
+The primers are trimmed from the reads using ivar trim. <br/>
+The consensus is generated from the aligned reads using ivar consensus. <br/>
+
+
+
+##Config Notes
+
+
+
 ## Rulegraph
 ![Alt text](documentation/rulegraph.svg "Rulegraph")
