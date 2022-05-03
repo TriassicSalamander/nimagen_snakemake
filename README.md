@@ -18,6 +18,7 @@ conda install mamba -n base -c conda-forge
 
 ## Processing Waste Water Samples
 Currently, whether or not freyja is used in the pipeline is controlled by commenting/uncommenting the 'Freyja Outputs' in 'rule all' in the Snakefile. <br/>
+See comments in Snakefile for more detail.
 
 
 ## Using autoNimagen
