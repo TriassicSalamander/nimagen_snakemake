@@ -57,7 +57,8 @@ rule all:
 #        freyja_summarised_plot =  config["summary_dir"] + "/All-freyja-summarised-plot.pdf",
 #        freyja_lineage_plot =  config["summary_dir"] + "/All-freyja-lineage-plot.pdf",
 #        temp_aggregated = config["summary_dir"] + "/All-freyja-demixed_temp.tsv"
-
+#^^^ COMMENT/UNCOMMENT THE ABOVE THREE LINES TO CONTROL FREYJA STEPS ^^^
+#This is not good practise and should probably be controlled from the config instead.
 
 ##### Modules #####
 include: "rules/readAlign-Illumina-NimaGen.smk"
