@@ -33,13 +33,11 @@ sample_sheet.close()
 
 
 #Shortened sample name
-SAMPLE_DIRS = [id.split('_')[0] for id in SAMPLES]
-#SAMPLE_DIRS = ['_'.join(id.split('_')[0:2]) for id in SAMPLES]   #Used for waste water samples to include sample condition
+SAMPLE_DIRS = [id.rsplit('_', 1)[0] for id in SAMPLES]
 
 
 #Dictionary of shortened sample name to full sample name
-SAMPLES_DICT = {sample.split('_')[0]:sample for sample in SAMPLES}
-#SAMPLES_DICT = {'_'.join(sample.split('_')[0:2]):sample for sample in SAMPLES}
+SAMPLES_DICT = {sample.rsplit('_', 1)[0]:sample for sample in SAMPLES}
 
 
 ##### Request Outputs #####

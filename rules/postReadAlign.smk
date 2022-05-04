@@ -17,7 +17,7 @@ rule aggregate_consensus:
 
         for sample_consensus in ${{sorted_samples[@]}}   #Loop through the sorted array
         do
-        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f 1)   #Get sample name from the file path. This will be used as the fasta header.
+        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | cut -d _ -f 4- | rev)   #Get sample name from the file path. This will be used as the fasta header.
         awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus   #If a line begins with '>', print the new header. Otherwise print the sequence.
         done >{output.aggregated_consensus} \
         2>{log}
@@ -130,7 +130,7 @@ rule aggregate_masked_consensus:
 
         for sample_consensus in ${{sorted_samples[@]}}
         do
-        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | rev | cut -d _ -f 1)
+        fasta_header=$(echo $sample_consensus | rev | cut -d / -f 1 | cut -d _ -f 3- | rev)
         awk -v fasta_header="$fasta_header" '{{if($1~/>/){{print ">"fasta_header;}} else print}}' $sample_consensus
         done >{output.aggregated_masked_consensus} \
         2>{log}
@@ -157,7 +157,7 @@ rule make_climb_dir:
         for sample_bam in ${{bam_array[@]}}   #Loop through array of bam files.
         do
 
-        newName=$(echo $sample_bam | rev | cut -d / -f 1 | rev | cut -d _ -f 1)   #Get sample name from the file path. This will be used as the new filename and fasta header.
+        newName=$(echo $sample_bam | rev | cut -d / -f 1 | cut -d _ -f 3- | rev)   #Get sample name from the file path. This will be used as the new filename and fasta header.
         cp $sample_bam {params.climb_dir}/$newName/$newName.bam   #Copy the sample bam file to the climb directory.
         awk -v newName="$newName" '{{if($1~/>/){{print ">"newName;}} else print}}' {params.sample_path}/$newName/$newName*_masked_consensus.fa > {params.climb_dir}/$newName/$newName.fa
 
