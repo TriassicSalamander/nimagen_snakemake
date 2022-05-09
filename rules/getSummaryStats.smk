@@ -217,6 +217,8 @@ rule assign_lineages:
         "logs/pangolin.log"
     shell:
         r"""
+        eval "$(conda shell.bash hook)"   #Line required for using conda activate in rule
+
         conda activate pangolin   #Move into the pangolin environment, which is separate from the nimagen_snakemake environment.
 
         pangolin --update   #Make sure pangolin is up to date
