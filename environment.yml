@@ -1,10 +1,9 @@
 name: nimagen_snakemake
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
-  - pangolin
   - snakemake
   - biopython
   - prinseq-plus-plus

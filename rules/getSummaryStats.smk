@@ -217,11 +217,17 @@ rule assign_lineages:
         "logs/pangolin.log"
     shell:
         r"""
+        conda activate pangolin   #Move into the pangolin environment, which is separate from the nimagen_snakemake environment.
+
+        pangolin --update   #Make sure pangolin is up to date
+
         pangolin \
         {input.masked_consensus} \
         -t {params.threads} \
         -o {params.out_dir} \
         2>{log}
+
+        conda deactivate   #Exit the environment, returning to nimagen_snakemake.
         """
 
 
