@@ -275,7 +275,7 @@ rule plot_aggregate_freyja:
     input:
         aggregated_demixed = rules.aggregate_freyja_demixed.output.aggregated_demmixed
     output:
-        temp_aggregated = temp(config["summary_dir"] + "/All-freyja-demixed_temp.tsv"),
+        temp_aggregated = config["summary_dir"] + "/All-freyja-demixed_non-blank.tsv",
         freyja_summarised_plot = config["summary_dir"] + "/All-freyja-summarised-plot.pdf",
         freyja_lineage_plot = config["summary_dir"] + "/All-freyja-lineage-plot.pdf"
     log:
