@@ -23,8 +23,13 @@ for row in sample_sheet.readlines():
             continue
     elif is_sample_id == True:
         sample_count += 1
-        SAMPLES.append(row.split(',')[0] + '_S' + str(sample_count))
+        SAMPLES.append(row.split(',')[0] + '_S' + str(sample_count)) 
 sample_sheet.close()
+
+
+#Removing empty fastqs from sample list manually
+SAMPLES.remove("SEPA0392-LunaClean_S296")
+SAMPLES.remove("SEPA0392-Luna_S200")
 
 
 #Testing set
@@ -52,9 +57,9 @@ rule all:
 #Climb Dir
         climb_bam = expand(config["batch_dir"] + "/ClimbSeq/{sample}/{sample}.bam", sample=SAMPLE_DIRS),
 #Freyja Outputs
-#        freyja_summarised_plot =  config["summary_dir"] + "/All-freyja-summarised-plot.pdf",
-#        freyja_lineage_plot =  config["summary_dir"] + "/All-freyja-lineage-plot.pdf",
-#        temp_aggregated = config["summary_dir"] + "/All-freyja-demixed_temp.tsv"
+        freyja_summarised_plot =  config["summary_dir"] + "/All-freyja-summarised-plot.pdf",
+        freyja_lineage_plot =  config["summary_dir"] + "/All-freyja-lineage-plot.pdf",
+        temp_aggregated = config["summary_dir"] + "/All-freyja-demixed_non-blank.tsv"
 #^^^ COMMENT/UNCOMMENT THE ABOVE THREE LINES TO CONTROL FREYJA STEPS ^^^
 #This is not good practise and should probably be controlled from the config instead.
 
