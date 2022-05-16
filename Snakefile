@@ -27,11 +27,6 @@ for row in sample_sheet.readlines():
 sample_sheet.close()
 
 
-#Removing empty fastqs from sample list manually
-SAMPLES.remove("SEPA0392-LunaClean_S296")
-SAMPLES.remove("SEPA0392-Luna_S200")
-
-
 #Testing set
 #Uncomment below line to only run pipeline with 10 samples
 #SAMPLES = SAMPLES[30:40]
