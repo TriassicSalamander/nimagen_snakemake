@@ -27,7 +27,7 @@ Writes a CSV with the number of Ns per sample. <br/>
 Script will replace ambiguous nucleotides with 'N' in regions of fasta sequences specified by regions file. <br/>
 
 ## process_freyja_demixed.py
-Takes 'All-freyja-demixed.tsv' as input <br/>.
+Takes 'All-freyja-demixed.tsv' as input. <br/>
 Writes a tsv with the lineages for each sample and what condition that lineage is speccific to. <br/>
 Writes a csv with the abundance a given lineage has in a given sample and condition. Also states whether that lineage is also found in another condition for a given sample. <br/>
 
